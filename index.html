@@ -11,18 +11,34 @@
          font-family:system-ui,sans-serif; display:flex; flex-direction:column;
          align-items:center; justify-content:center; gap:16px; padding:16px; }
   h1 { margin:0; font-size:1.4rem; }
-  #field { position:relative; width:min(100%,480px); height:260px; overflow:hidden;
-           background:linear-gradient(#26364a,#3b5169); border-radius:12px; }
-  #ground { position:absolute; left:0; right:0; bottom:0; height:40px; background:var(--ground); }
-  #cannon { position:absolute; left:24px; bottom:30px; width:90px; height:60px; }
-  #barrel { position:absolute; left:20px; bottom:22px; width:70px; height:22px; background:#555;
-            border-radius:4px 10px 10px 4px; transform-origin:10px 50%; transform:rotate(-30deg);
-            transition:transform .08s; }
-  #barrel.fire { transform:rotate(-30deg) translateX(-8px); }
-  #wheel { position:absolute; left:6px; bottom:0; width:40px; height:40px; background:#8a5a2b;
-           border:5px solid #5b3a17; border-radius:50%; }
-  #ball { position:absolute; width:14px; height:14px; background:#111; border-radius:50%; display:none; }
-  #boom { position:absolute; font-size:2rem; display:none; }
+  /* Space scene is a fixed dark look in both themes. */
+  #field { position:relative; width:min(100%,480px); height:240px; overflow:hidden; border-radius:14px; flex:none;
+    background:
+      radial-gradient(1.5px 1.5px at 20% 22%,#fff,transparent), radial-gradient(1px 1px at 45% 12%,#cfe,transparent),
+      radial-gradient(1.5px 1.5px at 70% 32%,#fff,transparent), radial-gradient(1px 1px at 88% 15%,#fff,transparent),
+      radial-gradient(1px 1px at 33% 45%,#bdf,transparent), radial-gradient(1px 1px at 60% 58%,#fff,transparent),
+      radial-gradient(1px 1px at 8% 60%,#fff,transparent), radial-gradient(1px 1px at 52% 30%,#fff,transparent),
+      linear-gradient(#090d22,#1b1646 70%,#2b1d5a); }
+  #planet { position:absolute; right:30px; top:22px; width:44px; height:44px; border-radius:50%;
+    background:radial-gradient(circle at 32% 30%,#ffd29a,#d9722e 55%,#7a2f1c); }
+  #planet::after { content:""; position:absolute; left:-14px; right:-14px; top:50%; height:12px;
+    border:2px solid rgba(255,225,180,.75); border-radius:50%; transform:translateY(-50%) rotate(-18deg); }
+  #ground { position:absolute; inset:auto 0 0 0; height:40px; border-top:2px solid #6b638f;
+    background:radial-gradient(ellipse 22px 5px at 30% 50%,#1d1933,transparent), radial-gradient(ellipse 30px 6px at 72% 62%,#1d1933,transparent),
+      linear-gradient(#4a4466,#2a2540); }
+  #base { position:absolute; left:14px; bottom:36px; width:100px; height:56px; }
+  #barrel { position:absolute; left:48px; bottom:57px; width:90px; height:30px; transform-origin:16px 15px;
+    transform:rotate(-30deg); transition:transform .08s, filter .2s; filter:drop-shadow(0 0 3px #38e1ff88); }
+  #barrel.recoil { transform:rotate(-30deg) translateX(-8px); filter:drop-shadow(0 0 10px #38e1ff); }
+  #ball { position:absolute; width:16px; height:16px; margin:-8px 0 0 -8px; border-radius:50%; display:none;
+    background:radial-gradient(circle,#fff 0 25%,#7df3ff 45%,#18b8e8 75%); box-shadow:0 0 12px 4px #38e1ffcc; }
+  #blast { position:absolute; width:14px; height:14px; margin:-7px 0 0 -7px; border-radius:50%; display:none;
+    border:2px solid #7df3ff; background:radial-gradient(circle,#fff,#38e1ff55 60%,transparent); }
+  #blast.go { animation:blast .55s ease-out forwards; }
+  @keyframes blast { from { transform:scale(.4); opacity:1; } to { transform:scale(5); opacity:0; } }
+  #scale { position:absolute; left:150px; right:50px; bottom:10px; display:flex; justify-content:space-between;
+    font-size:.7rem; color:#d7d2f0; font-variant-numeric:tabular-nums; }
+  @media (prefers-reduced-motion: reduce) { #blast.go { animation:none; opacity:.6; } }
   #result { font-size:5rem; font-weight:800; color:var(--accent); min-height:1.2em; }
   button { font-size:1.2rem; padding:12px 28px; border:0; border-radius:999px;
            background:var(--accent); color:#fff; font-weight:700; cursor:pointer; }
@@ -34,16 +50,42 @@
 <body>
   <h1>💣 대포 번호 뽑기 (1~60)</h1>
   <div id="field">
-    <div id="cannon"><div id="barrel"></div><div id="wheel"></div></div>
-    <div id="ball"></div><div id="boom">💥</div>
+    <div id="planet"></div>
     <div id="ground"></div>
+    <svg id="base" viewBox="0 0 100 56" aria-hidden="true">
+      <defs>
+        <linearGradient id="hull" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e8ecf6"/><stop offset="1" stop-color="#7d869f"/></linearGradient>
+        <radialGradient id="domeg" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#aeb8d4"/><stop offset="1" stop-color="#55607f"/></radialGradient>
+      </defs>
+      <path d="M8 56 L18 36 H82 L92 56 Z" fill="#3a4160"/>
+      <path d="M14 46 H86" stroke="#38e1ff" stroke-width="2" stroke-linecap="round"/>
+      <rect x="14" y="30" width="72" height="9" rx="4.5" fill="url(#hull)"/>
+      <circle cx="50" cy="22" r="18" fill="url(#domeg)"/>
+      <path d="M36 20 A15 15 0 0 1 64 20" fill="none" stroke="#38e1ff" stroke-width="2" opacity=".85"/>
+      <circle cx="50" cy="22" r="6" fill="#0a1230" stroke="#38e1ff" stroke-width="2"/>
+      <circle cx="50" cy="22" r="2.2" fill="#7df3ff"/>
+      <path d="M78 30 V14" stroke="#9aa5c4" stroke-width="2"/><circle cx="78" cy="12" r="3" fill="#ff5d73"/>
+    </svg>
+    <svg id="barrel" viewBox="0 0 90 30" aria-hidden="true">
+      <defs><linearGradient id="tube" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f1f4fb"/><stop offset=".5" stop-color="#9aa5c4"/><stop offset="1" stop-color="#4b5575"/></linearGradient></defs>
+      <rect x="10" y="8" width="64" height="14" rx="3" fill="url(#tube)"/>
+      <path d="M72 3 L88 1 L88 29 L72 27 Z" fill="url(#tube)"/>
+      <rect x="28" y="5" width="4" height="20" rx="2" fill="#38e1ff"/>
+      <rect x="42" y="5" width="4" height="20" rx="2" fill="#38e1ff"/>
+      <rect x="56" y="5" width="4" height="20" rx="2" fill="#38e1ff"/>
+      <ellipse cx="88" cy="15" rx="2.5" ry="11" fill="#0a1230" stroke="#7df3ff" stroke-width="1.5"/>
+      <circle cx="16" cy="15" r="11" fill="url(#tube)" stroke="#38e1ff" stroke-width="1.5"/>
+      <circle cx="16" cy="15" r="3.5" fill="#7df3ff"/>
+    </svg>
+    <div id="ball"></div><div id="blast"></div>
+    
   </div>
   <div id="result" aria-live="polite">?</div>
   <button id="fire">발사!</button>
   <div id="history"></div>
 <script>
   const $ = id => document.getElementById(id);
-  const field = $('field'), ball = $('ball'), boom = $('boom'), barrel = $('barrel');
+  const field = $('field'), ball = $('ball'), blast = $('blast'), barrel = $('barrel');
   const result = $('result'), btn = $('fire'), history = $('history');
   const past = [];
 
@@ -53,35 +95,38 @@
     return min + (buf[0] % (max - min + 1));
   }
 
+  function launch(n, done) {
+    const w = field.clientWidth, h = field.clientHeight;
+    const x0 = 128, y0 = h - 109, x1 = 150 + (w - 200) * (n / 60), y1 = h - 46;
+    const peak = 70 + 60 * (n / 60);
+    barrel.classList.add('recoil');
+    setTimeout(() => barrel.classList.remove('recoil'), 140);
+    ball.style.display = 'block';
+    blast.style.display = 'none';
+    const dur = 900, t0 = performance.now();
+    (function step(now) {
+      const t = Math.min((now - t0) / dur, 1);
+      ball.style.left = (x0 + (x1 - x0) * t) + 'px';
+      ball.style.top = (y0 + (y1 - y0) * t - 4 * peak * t * (1 - t)) + 'px';
+      if (t < 1) return requestAnimationFrame(step);
+      ball.style.display = 'none';
+      blast.style.left = x1 + 'px';
+      blast.style.top = y1 + 'px';
+      blast.style.display = 'block';
+      blast.classList.remove('go'); void blast.offsetWidth; blast.classList.add('go');
+      done();
+    })(t0);
+  }
   function fire() {
     btn.disabled = true;
     result.textContent = '?';
     const number = randomInt(1, 60);
-    const w = field.clientWidth, h = field.clientHeight;
-    const x0 = 100, y0 = h - 85;
-    const x1 = 130 + (w - 170) * (number / 60), y1 = h - 40;
-    const peak = 70 + 60 * (number / 60);
-    barrel.classList.add('fire');
-    setTimeout(() => barrel.classList.remove('fire'), 120);
-    ball.style.display = 'block';
-    boom.style.display = 'none';
-    const dur = 900, start = performance.now();
-    (function step(now) {
-      const t = Math.min((now - start) / dur, 1);
-      const x = x0 + (x1 - x0) * t;
-      const y = y0 + (y1 - y0) * t - 4 * peak * t * (1 - t);
-      ball.style.left = x + 'px';
-      ball.style.top = y + 'px';
-      if (t < 1) return requestAnimationFrame(step);
-      ball.style.display = 'none';
-      boom.style.left = (x1 - 14) + 'px';
-      boom.style.top = (y1 - 30) + 'px';
-      boom.style.display = 'block';
+    launch(number, () => {
       result.textContent = number;
       past.unshift(number);
       history.textContent = '누적 결과 (' + past.length + '번): ' + past.join(', ');
       btn.disabled = false;
-    })(start);
+    });
   }
   btn.addEventListener('click', fire);
 </script>
