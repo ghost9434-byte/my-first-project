@@ -27,7 +27,8 @@
   button { font-size:1.2rem; padding:12px 28px; border:0; border-radius:999px;
            background:var(--accent); color:#fff; font-weight:700; cursor:pointer; }
   button:disabled { opacity:.5; cursor:default; }
-  #history { opacity:.8; font-size:.95rem; text-align:center; min-height:1.4em; }
+  #history { opacity:.9; font-size:.95rem; text-align:center; min-height:1.4em; max-width:480px;
+             max-height:6rem; overflow-y:auto; word-break:keep-all; }
 </style>
 </head>
 <body>
@@ -78,7 +79,7 @@
       boom.style.display = 'block';
       result.textContent = number;
       past.unshift(number);
-      history.textContent = '이전 결과: ' + past.slice(1, 11).join(', ');
+      history.textContent = '누적 결과 (' + past.length + '번): ' + past.join(', ');
       btn.disabled = false;
     })(start);
   }
