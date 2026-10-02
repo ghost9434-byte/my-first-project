@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>대포 번호 뽑기</title>
+<style>
+  :root { --bg:#1b2430; --fg:#f3f0e6; --accent:#ff7a3d; --ground:#3a4a2f; }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; background:var(--bg); color:var(--fg);
+         font-family:system-ui,sans-serif; display:flex; flex-direction:column;
+         align-items:center; justify-content:center; gap:16px; padding:16px; }
+  h1 { margin:0; font-size:1.4rem; }
+  #field { position:relative; width:min(100%,480px); height:260px; overflow:hidden;
+           background:linear-gradient(#26364a,#3b5169); border-radius:12px; }
+  #ground { position:absolute; left:0; right:0; bottom:0; height:40px; background:var(--ground); }
+  #cannon { position:absolute; left:24px; bottom:30px; width:90px; height:60px; }
+  #barrel { position:absolute; left:20px; bottom:22px; width:70px; height:22px; background:#555;
+            border-radius:4px 10px 10px 4px; transform-origin:10px 50%; transform:rotate(-30deg);
+            transition:transform .08s; }
+  #barrel.fire { transform:rotate(-30deg) translateX(-8px); }
+  #wheel { position:absolute; left:6px; bottom:0; width:40px; height:40px; background:#8a5a2b;
+           border:5px solid #5b3a17; border-radius:50%; }
+  #ball { position:absolute; width:14px; height:14px; background:#111; border-radius:50%; display:none; }
+  #boom { position:absolute; font-size:2rem; display:none; }
+  #result { font-size:5rem; font-weight:800; color:var(--accent); min-height:1.2em; }
+  button { font-size:1.2rem; padding:12px 28px; border:0; border-radius:999px;
+           background:var(--accent); color:#fff; font-weight:700; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:default; }
+  #history { opacity:.8; font-size:.95rem; text-align:center; min-height:1.4em; }
+</style>
+</head>
+<body>
+  <h1>💣 대포 번호 뽑기 (1~60)</h1>
+  <div id="field">
+    <div id="cannon"><div id="barrel"></div><div id="wheel"></div></div>
+    <div id="ball"></div><div id="boom">💥</div>
+    <div id="ground"></div>
+  </div>
+  <div id="result" aria-live="polite">?</div>
+  <button id="fire">발사!</button>
+  <div id="history"></div>
+<script>
+  const $ = id => document.getElementById(id);
+  const field = $('field'), ball = $('ball'), boom = $('boom'), barrel = $('barrel');
+  const result = $('result'), btn = $('fire'), history = $('history');
+  const past = [];
+
+  function randomInt(min, max) {
+    const buf = new Uint32Array(1);
+    crypto.getRandomValues(buf);
+    return min + (buf[0] % (max - min + 1));
+  }
+
+  function fire() {
+    btn.disabled = true;
+    result.textContent = '?';
+    const number = randomInt(1, 60);
+    const w = field.clientWidth, h = field.clientHeight;
+    const x0 = 100, y0 = h - 85;
+    const x1 = 130 + (w - 170) * (number / 60), y1 = h - 40;
+    const peak = 70 + 60 * (number / 60);
+    barrel.classList.add('fire');
+    setTimeout(() => barrel.classList.remove('fire'), 120);
+    ball.style.display = 'block';
+    boom.style.display = 'none';
+    const dur = 900, start = performance.now();
+    (function step(now) {
+      const t = Math.min((now - start) / dur, 1);
+      const x = x0 + (x1 - x0) * t;
+      const y = y0 + (y1 - y0) * t - 4 * peak * t * (1 - t);
+      ball.style.left = x + 'px';
+      ball.style.top = y + 'px';
+      if (t < 1) return requestAnimationFrame(step);
+      ball.style.display = 'none';
+      boom.style.left = (x1 - 14) + 'px';
+      boom.style.top = (y1 - 30) + 'px';
+      boom.style.display = 'block';
+      result.textContent = number;
+      past.unshift(number);
+      history.textContent = '이전 결과: ' + past.slice(1, 11).join(', ');
+      btn.disabled = false;
+    })(start);
+  }
+  btn.addEventListener('click', fire);
+</script>
+</body>
+</html>
