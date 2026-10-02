@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>대포 번호 뽑기</title>
+<style>
+  :root { --bg:#1b2430; --fg:#f3f0e6; --accent:#ff7a3d; --ground:#3a4a2f; }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; background:var(--bg); color:var(--fg);
+         font-family:system-ui,sans-serif; display:flex; flex-direction:column;
+         align-items:center; justify-content:center; gap:16px; padding:16px; }
+  h1 { margin:0; font-size:1.4rem; }
+  /* Space scene is a fixed dark look in both themes. */
+  #field { position:relative; width:min(100%,480px); height:240px; overflow:hidden; border-radius:14px; flex:none;
+    background:
+      radial-gradient(1.5px 1.5px at 20% 22%,#fff,transparent), radial-gradient(1px 1px at 45% 12%,#cfe,transparent),
+      radial-gradient(1.5px 1.5px at 70% 32%,#fff,transparent), radial-gradient(1px 1px at 88% 15%,#fff,transparent),
+      radial-gradient(1px 1px at 33% 45%,#bdf,transparent), radial-gradient(1px 1px at 60% 58%,#fff,transparent),
+      radial-gradient(1px 1px at 8% 60%,#fff,transparent), radial-gradient(1px 1px at 52% 30%,#fff,transparent),
+      linear-gradient(#090d22,#1b1646 70%,#2b1d5a); }
+  #planet { position:absolute; right:30px; top:22px; width:44px; height:44px; border-radius:50%;
+    background:radial-gradient(circle at 32% 30%,#ffd29a,#d9722e 55%,#7a2f1c); }
+  #planet::after { content:""; position:absolute; left:-14px; right:-14px; top:50%; height:12px;
+    border:2px solid rgba(255,225,180,.75); border-radius:50%; transform:translateY(-50%) rotate(-18deg); }
+  #ground { position:absolute; inset:auto 0 0 0; height:40px; border-top:2px solid #6b638f;
+    background:radial-gradient(ellipse 22px 5px at 30% 50%,#1d1933,transparent), radial-gradient(ellipse 30px 6px at 72% 62%,#1d1933,transparent),
+      linear-gradient(#4a4466,#2a2540); }
+  #base { position:absolute; left:14px; bottom:36px; width:100px; height:56px; }
+  #barrel { position:absolute; left:48px; bottom:57px; width:90px; height:30px; transform-origin:16px 15px;
+    transform:rotate(-30deg); transition:transform .08s, filter .2s; filter:drop-shadow(0 0 3px #38e1ff88); }
+  #barrel.recoil { transform:rotate(-30deg) translateX(-8px); filter:drop-shadow(0 0 10px #38e1ff); }
+  #ball { position:absolute; width:16px; height:16px; margin:-8px 0 0 -8px; border-radius:50%; display:none;
+    background:radial-gradient(circle,#fff 0 25%,#7df3ff 45%,#18b8e8 75%); box-shadow:0 0 12px 4px #38e1ffcc; }
+  #blast { position:absolute; width:14px; height:14px; margin:-7px 0 0 -7px; border-radius:50%; display:none;
+    border:2px solid #7df3ff; background:radial-gradient(circle,#fff,#38e1ff55 60%,transparent); }
+  #blast.go { animation:blast .55s ease-out forwards; }
+  @keyframes blast { from { transform:scale(.4); opacity:1; } to { transform:scale(5); opacity:0; } }
+  #scale { position:absolute; left:150px; right:50px; bottom:10px; display:flex; justify-content:space-between;
+    font-size:.7rem; color:#d7d2f0; font-variant-numeric:tabular-nums; }
+  @media (prefers-reduced-motion: reduce) { #blast.go { animation:none; opacity:.6; } }
+  #sound { position:absolute; left:10px; top:10px; z-index:2; width:36px; height:36px; border-radius:50%; border:1px solid #6b638f;
+    background:#0a1230aa; color:#fff; font-size:1rem; line-height:1; cursor:pointer; padding:0; }
+  #sound:focus-visible { outline:3px solid #7df3ff; outline-offset:2px; }
+  #result { font-size:5rem; font-weight:800; color:var(--accent); min-height:1.2em; }
+  button { font-size:1.2rem; padding:12px 28px; border:0; border-radius:999px;
+           background:var(--accent); color:#fff; font-weight:700; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:default; }
+  #history { opacity:.9; font-size:.95rem; text-align:center; min-height:1.4em; max-width:480px;
+             max-height:6rem; overflow-y:auto; word-break:keep-all; }
+</style>
+</head>
+<body>
+  <h1>💣 대포 번호 뽑기 (1~60)</h1>
+  <div id="field">
+    <button id="sound" type="button" aria-label="소리 켜기/끄기" aria-pressed="false">🔊</button>
+    <div id="planet"></div>
+    <div id="ground"></div>
+    <svg id="base" viewBox="0 0 100 56" aria-hidden="true">
+      <defs>
+        <linearGradient id="hull" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e8ecf6"/><stop offset="1" stop-color="#7d869f"/></linearGradient>
+        <radialGradient id="domeg" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#aeb8d4"/><stop offset="1" stop-color="#55607f"/></radialGradient>
+      </defs>
+      <path d="M8 56 L18 36 H82 L92 56 Z" fill="#3a4160"/>
+      <path d="M14 46 H86" stroke="#38e1ff" stroke-width="2" stroke-linecap="round"/>
+      <rect x="14" y="30" width="72" height="9" rx="4.5" fill="url(#hull)"/>
+      <circle cx="50" cy="22" r="18" fill="url(#domeg)"/>
+      <path d="M36 20 A15 15 0 0 1 64 20" fill="none" stroke="#38e1ff" stroke-width="2" opacity=".85"/>
+      <circle cx="50" cy="22" r="6" fill="#0a1230" stroke="#38e1ff" stroke-width="2"/>
+      <circle cx="50" cy="22" r="2.2" fill="#7df3ff"/>
+      <path d="M78 30 V14" stroke="#9aa5c4" stroke-width="2"/><circle cx="78" cy="12" r="3" fill="#ff5d73"/>
+    </svg>
+    <svg id="barrel" viewBox="0 0 90 30" aria-hidden="true">
+      <defs><linearGradient id="tube" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f1f4fb"/><stop offset=".5" stop-color="#9aa5c4"/><stop offset="1" stop-color="#4b5575"/></linearGradient></defs>
+      <rect x="10" y="8" width="64" height="14" rx="3" fill="url(#tube)"/>
+      <path d="M72 3 L88 1 L88 29 L72 27 Z" fill="url(#tube)"/>
+      <rect x="28" y="5" width="4" height="20" rx="2" fill="#38e1ff"/>
+      <rect x="42" y="5" width="4" height="20" rx="2" fill="#38e1ff"/>
+      <rect x="56" y="5" width="4" height="20" rx="2" fill="#38e1ff"/>
+      <ellipse cx="88" cy="15" rx="2.5" ry="11" fill="#0a1230" stroke="#7df3ff" stroke-width="1.5"/>
+      <circle cx="16" cy="15" r="11" fill="url(#tube)" stroke="#38e1ff" stroke-width="1.5"/>
+      <circle cx="16" cy="15" r="3.5" fill="#7df3ff"/>
+    </svg>
+    <div id="ball"></div><div id="blast"></div>
+    
+  </div>
+  <div id="result" aria-live="polite">?</div>
+  <button id="fire">발사!</button>
+  <div id="history"></div>
+<script>
+  const $ = id => document.getElementById(id);
+  const field = $('field'), ball = $('ball'), blast = $('blast'), barrel = $('barrel');
+  const result = $('result'), btn = $('fire'), history = $('history');
+  const past = [];
+
+  function randomInt(min, max) {
+    const buf = new Uint32Array(1);
+    crypto.getRandomValues(buf);
+    return min + (buf[0] % (max - min + 1));
+  }
+
+  /* Synthesized sound (Web Audio), no audio files. */
+  let actx = null, bus = null, soundOn = true;
+  function audio() {
+    if (!soundOn) return null;
+    if (!actx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      actx = new AC();
+      const comp = actx.createDynamicsCompressor();
+      comp.connect(actx.destination);
+      bus = actx.createGain();
+      bus.gain.value = 0.9;
+      bus.connect(comp);
+      const len = actx.sampleRate * 2.2, ir = actx.createBuffer(2, len, actx.sampleRate);
+      for (let c = 0; c < 2; c++) {
+        const d = ir.getChannelData(c);
+        for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.5);
+      }
+      const verb = actx.createConvolver(), wet = actx.createGain();
+      verb.buffer = ir; wet.gain.value = 0.45;
+      bus.connect(verb); verb.connect(wet); wet.connect(comp);
+    }
+    if (actx.state === 'suspended') actx.resume();
+    return actx;
+  }
+  function tone(c, type, f0, f1, t, dur, vol, filt) {
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(f0, t);
+    o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    let node = o;
+    if (filt) { const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = filt; o.connect(f); node = f; }
+    node.connect(g); g.connect(bus);
+    o.start(t); o.stop(t + dur + 0.05);
+  }
+  function hiss(c, t, dur, vol, type, f0, f1) {
+    const buf = c.createBuffer(1, c.sampleRate * dur, c.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+    s.buffer = buf; f.type = type;
+    f.frequency.setValueAtTime(f0, t);
+    f.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    s.connect(f); f.connect(g); g.connect(bus);
+    s.start(t);
+  }
+  const sfx = {
+    fire() {
+      const c = audio(); if (!c) return; const t = c.currentTime;
+      tone(c, 'sawtooth', 1400, 90, t, 0.35, 0.22, 3000);   // laser zap
+      tone(c, 'sine', 140, 32, t, 1.1, 1.0);                // muzzle boom
+      hiss(c, t, 0.6, 0.8, 'lowpass', 2200, 160);           // blast
+      hiss(c, t + 0.1, 0.8, 0.25, 'bandpass', 500, 1800);   // shell whoosh
+    },
+    impact() {
+      const c = audio(); if (!c) return; const t = c.currentTime;
+      tone(c, 'sine', 100, 26, t, 1.6, 1.0);                // sub boom
+      hiss(c, t, 1.3, 0.9, 'lowpass', 3500, 120);           // explosion
+      hiss(c, t, 0.5, 0.25, 'highpass', 2500, 6000);        // debris
+      [110, 164.8, 220, 329.6].forEach((f, i) => {          // grand chord swell
+        const o = c.createOscillator(), fl = c.createBiquadFilter(), g = c.createGain(), s = t + 0.12;
+        o.type = 'sawtooth'; o.frequency.value = f; o.detune.value = i % 2 ? 6 : -6;
+        fl.type = 'lowpass'; fl.frequency.setValueAtTime(300, s); fl.frequency.exponentialRampToValueAtTime(2200, s + 0.5);
+        g.gain.setValueAtTime(0.001, s); g.gain.exponentialRampToValueAtTime(0.16, s + 0.35);
+        g.gain.exponentialRampToValueAtTime(0.001, s + 2.0);
+        o.connect(fl); fl.connect(g); g.connect(bus); o.start(s); o.stop(s + 2.1);
+      });
+    }
+  };
+  $('sound').addEventListener('click', () => {
+    soundOn = !soundOn;
+    $('sound').textContent = soundOn ? '🔊' : '🔇';
+    $('sound').setAttribute('aria-pressed', String(!soundOn));
+    if (soundOn) audio();
+  });
+
+  function launch(n, done) {
+    const w = field.clientWidth, h = field.clientHeight;
+    const x0 = 128, y0 = h - 109, x1 = 150 + (w - 200) * (n / 60), y1 = h - 46;
+    const peak = 70 + 60 * (n / 60);
+    sfx.fire();
+    barrel.classList.add('recoil');
+    setTimeout(() => barrel.classList.remove('recoil'), 140);
+    ball.style.display = 'block';
+    blast.style.display = 'none';
+    const dur = 900, t0 = performance.now();
+    (function step(now) {
+      const t = Math.min((now - t0) / dur, 1);
+      ball.style.left = (x0 + (x1 - x0) * t) + 'px';
+      ball.style.top = (y0 + (y1 - y0) * t - 4 * peak * t * (1 - t)) + 'px';
+      if (t < 1) return requestAnimationFrame(step);
+      ball.style.display = 'none';
+      sfx.impact();
+      blast.style.left = x1 + 'px';
+      blast.style.top = y1 + 'px';
+      blast.style.display = 'block';
+      blast.classList.remove('go'); void blast.offsetWidth; blast.classList.add('go');
+      done();
+    })(t0);
+  }
+  function fire() {
+    btn.disabled = true;
+    result.textContent = '?';
+    const number = randomInt(1, 60);
+    launch(number, () => {
+      result.textContent = number;
+      past.unshift(number);
+      history.textContent = '누적 결과 (' + past.length + '번): ' + past.join(', ');
+      btn.disabled = false;
+    });
+  }
+  btn.addEventListener('click', fire);
+</script>
+</body>
+</html>
