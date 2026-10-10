@@ -91,17 +91,17 @@ def check_hongildong(state, formatted=True):
 def main():
     srv, port = serve()
     cases = [
-        ("기본 (mainFrame 안)", "2026-10-10-hongildong", "", True),
-        ("편집기가 바로 뜨는 경우", "2026-10-10-hongildong", "direct=1", True),
-        ("작성중 글 팝업 + 도움말", "2026-10-10-hongildong", "popup=1&help=1", True),
-        ("팝업이 늦게 뜨는 경우", "2026-10-10-hongildong", "popup=1&latepopup=1", True),
-        ("가짜 붙여넣기 거부 → 대체 경로", "2026-10-10-hongildong", "trustedonly=1", False),
-        ("사진 버튼이 파일창을 안 띄움", "2026-10-10-hongildong", "nochooser=1", True),
-        ("사진 업로드가 느림", "2026-10-10-hongildong", "slowupload=1", True),
-        ("저장 버튼 없음 → 단축키", "2026-10-10-hongildong", "nosavebtn=1", True),
-        ("로그인 먼저 필요", "2026-10-10-hongildong", "login=1", True),
-        ("붙여넣기 뒤 빈 줄 생김", "2026-10-10-hongildong", "pastetrailtext=1", True),
-        ("모든 경우 한꺼번에", "2026-10-10-hongildong", "popup=1&help=1&latepopup=1&nochooser=1&slowupload=1&pastetrailtext=1", True),
+        ("기본 (mainFrame 안)", "../tests/fixtures/basic", "", True),
+        ("편집기가 바로 뜨는 경우", "../tests/fixtures/basic", "direct=1", True),
+        ("작성중 글 팝업 + 도움말", "../tests/fixtures/basic", "popup=1&help=1", True),
+        ("팝업이 늦게 뜨는 경우", "../tests/fixtures/basic", "popup=1&latepopup=1", True),
+        ("가짜 붙여넣기 거부 → 대체 경로", "../tests/fixtures/basic", "trustedonly=1", False),
+        ("사진 버튼이 파일창을 안 띄움", "../tests/fixtures/basic", "nochooser=1", True),
+        ("사진 업로드가 느림", "../tests/fixtures/basic", "slowupload=1", True),
+        ("저장 버튼 없음 → 단축키", "../tests/fixtures/basic", "nosavebtn=1", True),
+        ("로그인 먼저 필요", "../tests/fixtures/basic", "login=1", True),
+        ("붙여넣기 뒤 빈 줄 생김", "../tests/fixtures/basic", "pastetrailtext=1", True),
+        ("모든 경우 한꺼번에", "../tests/fixtures/basic", "popup=1&help=1&latepopup=1&nochooser=1&slowupload=1&pastetrailtext=1", True),
     ]
     results = []
     for name, folder, q, formatted in cases:
@@ -129,6 +129,27 @@ def main():
         if "끝 문단" not in texts[-1] and "끝 문단" not in "".join(texts[-2:]): errs.append("끝 문단 위치")
     results.append(("사진 여러 장 한 번에", errs))
     print(("✅ " if not errs else "❌ ") + "사진 여러 장 한 번에" + ("" if not errs else " " + str(errs)), flush=True)
+
+    # 실제로 올릴 글 전체 (사진 10장)
+    for post in sorted((HERE.parent / "posts").iterdir()):
+        if not (post / "post.json").exists():
+            continue
+        data = json.loads((post / "post.json").read_text(encoding="utf-8"))
+        need = sum(len(b["files"]) if "files" in b else 1 for b in data["blocks"] if b["type"] == "image")
+        p, state = run(port, post.name, "popup=1&help=1&slowupload=1", timeout=400)
+        errs = []
+        if p.returncode != 0 or not state:
+            errs.append(f"실패: {(p.stdout + p.stderr)[-600:]}")
+        else:
+            k = kinds(state)
+            if k.count("image") != need: errs.append(f"사진 {k.count('image')}/{need}")
+            if state["title"].strip() != data["title"].strip(): errs.append("제목 다름")
+            if not state["saved"]: errs.append("저장 안 됨")
+            got_imgs = [i for i, kk in enumerate(k) if kk == "image"]
+            if got_imgs != sorted(got_imgs): errs.append("사진 순서")
+        name = f"실제 글: {post.name}"
+        results.append((name, errs))
+        print(("✅ " if not errs else "❌ ") + name + ("" if not errs else " " + str(errs)), flush=True)
 
     # 깨진 글 파일은 브라우저 열기 전에 막혀야 함
     p = subprocess.run([sys.executable, str(BOT), "check", "../tests/fixtures/broken"], capture_output=True, text=True)
