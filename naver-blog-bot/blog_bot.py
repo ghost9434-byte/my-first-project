@@ -489,23 +489,62 @@ class Bot:
             self.wait(0.5)
         self.wait(1.0)
 
+    def safe_click(self, loc, what="편집기"):
+        """사진을 넣은 직후 네이버가 투명한 선택 막(se-selection)을 덮어 클릭을 가로막는 경우가 있다.
+        1) 그냥 클릭 → 2) Esc로 선택을 풀고 다시 클릭 → 3) 막을 무시하고 그 줄에 직접 커서를 놓는다."""
+        page = self.page
+        try:
+            loc.click(timeout=3000)
+            return "click"
+        except PWTimeout:
+            pass
+        page.keyboard.press("Escape")
+        self.wait(0.5)
+        try:
+            loc.click(timeout=3000)
+            return "esc+click"
+        except PWTimeout:
+            pass
+        try:
+            loc.evaluate(
+                """el => {
+                    el.scrollIntoView({block: 'center'});
+                    const r = el.getBoundingClientRect();
+                    const opt = {bubbles: true, cancelable: true, view: window,
+                                 clientX: r.right - 2, clientY: r.top + r.height / 2};
+                    for (const t of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click'])
+                        el.dispatchEvent(new (t.startsWith('pointer') ? PointerEvent : MouseEvent)(t, opt));
+                    const sel = el.ownerDocument.getSelection();
+                    const range = el.ownerDocument.createRange();
+                    range.selectNodeContents(el);
+                    range.collapse(false);
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                    if (el.focus) el.focus();
+                }"""
+            )
+            self.wait(0.3)
+            return "direct"
+        except Exception as e:
+            raise BotError(f"{what}을(를) 누르지 못했습니다: {e}")
+
     def cursor_to_end(self, fr):
         """커서를 본문 맨 끝 빈 줄로 옮긴다. 마지막이 글이 아니면 새 줄을 만든다."""
         page = self.page
         last = fr.locator(self.sel_comp()).last
         cls = last.get_attribute("class") or ""
         if "se-text" in cls:
-            last.locator(".se-text-paragraph").last.click()
+            self.safe_click(last.locator(".se-text-paragraph").last, "마지막 줄")
             page.keyboard.press(DOC_END)
             page.keyboard.press("End")
             return
-        last.click()
+        self.safe_click(last, "마지막 사진")
         self.wait(0.3)
         page.keyboard.press("Enter")
         self.wait(0.5)
         last = fr.locator(self.sel_comp()).last
         if "se-text" in (last.get_attribute("class") or ""):
-            last.locator(".se-text-paragraph").last.click()
+            self.safe_click(last.locator(".se-text-paragraph").last, "새 줄")
             page.keyboard.press("End")
             return
         raise BotError("사진 다음 줄로 커서를 옮기지 못했습니다.")
@@ -550,7 +589,7 @@ class Bot:
                 self.say("글쓰기 화면이 열렸습니다.")
 
                 # 제목
-                fr.locator(SEL_TITLE).first.click()
+                self.safe_click(fr.locator(SEL_TITLE).first, "제목 칸")
                 page.keyboard.insert_text(data["title"].strip())
                 self.wait(0.3)
                 got = fr.locator(SEL_TITLE).first.inner_text().strip()
@@ -560,7 +599,7 @@ class Bot:
                 self.say(f"제목을 넣었습니다: {got}")
 
                 # 본문 첫 줄로
-                fr.locator(self.sel_text_para()).first.click()
+                self.safe_click(fr.locator(self.sel_text_para()).first, "본문 첫 줄")
 
                 for i, block in enumerate(data["blocks"], 1):
                     kind = block["type"]

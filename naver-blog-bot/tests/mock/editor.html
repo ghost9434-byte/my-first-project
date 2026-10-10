@@ -55,12 +55,18 @@ function insertAfterCurrent(nodes){
   if (replaceEmpty) current.remove();
   current=ref;
 }
-function select(c){ document.querySelectorAll('.se-component.selected').forEach(x=>x.classList.remove('selected')); c.classList.add('selected'); current=c; }
+// ?overlay=1 : 사진이 선택되면 투명한 선택 막이 본문을 덮어 클릭을 가로막는다 (Esc로 풀림)
+// ?overlay=2 : Esc로도 안 풀리는 막
+function clearOverlay(){ document.querySelectorAll('.se-selection').forEach(x=>x.remove()); }
+function select(c){ document.querySelectorAll('.se-component.selected').forEach(x=>x.classList.remove('selected')); c.classList.add('selected'); current=c;
+  if (P.get('overlay')) { clearOverlay(); main.style.position='relative'; const o=document.createElement('div'); o.className='se-selection';
+    o.style.cssText='position:absolute;inset:0;z-index:5'; o.innerHTML='<svg width="100%" height="100%"><rect width="100%" height="100%" fill="transparent"/></svg>'; main.appendChild(o); } }
 main.addEventListener('focusin', e=>{ const c=e.target.closest('.se-component:not(.se-documentTitle)'); if(c){current=c; document.querySelectorAll('.selected').forEach(x=>x.classList.remove('selected'));} });
 main.addEventListener('click', e=>{ const c=e.target.closest('.se-component'); if(c && !c.classList.contains('se-text')) select(c); });
 document.addEventListener('keydown', e=>{
   const sel=document.querySelector('.se-component.selected');
-  if (e.key==='Enter' && sel){ e.preventDefault(); const t=textComp(); sel.after(t); sel.classList.remove('selected'); current=t; t.querySelector('p').focus(); }
+  if (e.key==='Escape' && P.get('overlay')==='1'){ clearOverlay(); document.querySelectorAll('.selected').forEach(x=>x.classList.remove('selected')); }
+  if (e.key==='Enter' && sel){ clearOverlay(); e.preventDefault(); const t=textComp(); sel.after(t); sel.classList.remove('selected'); current=t; t.querySelector('p').focus(); }
   if ((e.key==='s'||e.key==='S') && (e.metaKey||e.ctrlKey)){ e.preventDefault(); window.__saved=true; }
 });
 
