@@ -69,3 +69,11 @@ def office_footer():
 def hashtags(tags):
     """글 끝 해시태그 줄. 네이버가 이 줄을 태그로 자동 등록한다."""
     return gap() + p(" ".join("#" + t.lstrip("#") for t in tags), size=13, color=GRAY)
+
+
+# 맥북 클로드가 바꾼 디자인은 blog_style_local.py (맥북에만 있고 GitHub로 오가지 않음)에 둔다.
+# 같은 이름의 함수가 있으면 그쪽이 이 파일의 것을 대신한다. 그래서 이 파일은 클라우드 쪽만 고친다.
+try:
+    from blog_style_local import *  # noqa: E402,F401,F403
+except ImportError:
+    pass

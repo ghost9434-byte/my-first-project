@@ -8,3 +8,4 @@ blog_snapshot/
 reads/
 .last_schedule
 .schedule_time
+blog_style_local.py
