@@ -16,7 +16,7 @@
    `.venv/bin/python make_post.py <영문-주제> <원본1> <원본2> ...`
 4. `examples/write_post_example.py` 를 본보기로 `blog_style.py` 함수만 써서 post.json 을 만든다.
    - `publish` 는 **False** (임시저장만). 사진에서 확인되지 않는 사실(가격, 면적, 설비 이름 등)은 쓰지 않는다.
-   - 대표 카드가 없으면 첫 사진을 맨 위에 둔다. 글 끝에는 SH공유오피스 안내와 해시태그 줄을 넣는다.
+   - 맨 위에는 `make_cover.py` 로 만든 대표 사진(실사 사진 + 제목, CLAUDE.md 참고)을 둔다. 글 끝에는 SH공유오피스 안내와 해시태그 줄을 넣는다.
 5. `.venv/bin/python blog_bot.py check <글폴더>` 로 점검한 뒤 `bash post.sh <글폴더> --draft` 로 임시저장한다.
 6. 임시저장이 되면 쓴 사진의 **원본 경로**를 한 줄에 하나씩 `naver-blog-bot/.used_photos` 끝에 덧붙인다.
 7. 마지막 줄에 결과를 정확히 이 형식으로 출력한다:
