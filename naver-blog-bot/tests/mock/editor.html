@@ -1,0 +1,99 @@
+<!doctype html><meta charset="utf-8"><title>mock SmartEditor</title>
+<style>
+ body{font-family:sans-serif;margin:0}
+ .top{display:flex;gap:8px;padding:8px;border-bottom:1px solid #ccc}
+ .se-component{border:1px dashed #ddd;margin:4px 0;padding:4px}
+ .se-component.selected{outline:2px solid blue}
+ .se-text-paragraph{min-height:1.2em}
+ .se-popup,.se-help-panel{position:fixed;inset:30% 30%;background:#fff;border:2px solid #333;padding:20px;z-index:9}
+ img{max-width:200px}
+</style>
+<div class="top">
+  <button class="se-image-toolbar-button se-document-toolbar-basic-button" type="button">사진</button>
+  <input type="file" id="fileInput" accept="image/*" multiple style="display:none">
+  <span style="flex:1"></span>
+  <button class="save_btn__bzc5B" type="button" id="saveBtn">저장 <span>3</span></button>
+  <button class="publish_btn__m9KHH" type="button">발행</button>
+</div>
+<div class="se-documentTitle"><p class="se-text-paragraph" contenteditable="true"></p></div>
+<div class="se-main-container">
+  <div class="se-component se-text"><p class="se-text-paragraph" contenteditable="true"></p></div>
+</div>
+<script>
+const P = new URLSearchParams(location.search);
+const opt = k => P.get(k) === '1';
+const main = document.querySelector('.se-main-container');
+let current = main.querySelector('.se-component');     // 커서가 있는 컴포넌트
+let delayShown = opt('latepopup') ? 1000 : 0;
+
+// 팝업들
+function showPopup(){ const d=document.createElement('div'); d.className='se-popup';
+  d.innerHTML='작성 중인 글이 있습니다. <button class="se-popup-button-cancel">취소</button><button class="se-popup-button-confirm">확인</button>';
+  document.body.appendChild(d); d.querySelector('.se-popup-button-cancel').onclick=()=>d.remove();
+  d.querySelector('.se-popup-button-confirm').onclick=()=>d.remove(); }
+if (opt('popup')) setTimeout(showPopup, delayShown);
+if (opt('help')) { const h=document.createElement('div'); h.className='se-help-panel';
+  h.innerHTML='도움말 <button class="se-help-panel-close-button">닫기</button>'; document.body.appendChild(h);
+  h.querySelector('button').onclick=()=>h.remove(); }
+// 팝업이 떠 있으면 편집 막기 (실제처럼 클릭을 가로막음)
+document.addEventListener('mousedown', e => { if (document.querySelector('.se-popup,.se-help-panel') && !e.target.closest('.se-popup,.se-help-panel')) { e.preventDefault(); e.stopPropagation(); window.__blocked=(window.__blocked||0)+1; } }, true);
+
+function textComp(html){ const c=document.createElement('div'); c.className='se-component se-text';
+  c.innerHTML='<p class="se-text-paragraph" contenteditable="true">'+(html||'')+'</p>'; return c; }
+function insertAfterCurrent(nodes){
+  let ref=current;
+  const para=ref && ref.querySelector('.se-text-paragraph');
+  const replaceEmpty = ref && ref.classList.contains('se-text') && para && para.innerText.trim()==='' ;
+  nodes.forEach(n=>{ ref.after(n); ref=n; });
+  if (replaceEmpty) current.remove();
+  current=ref;
+}
+function select(c){ document.querySelectorAll('.se-component.selected').forEach(x=>x.classList.remove('selected')); c.classList.add('selected'); current=c; }
+main.addEventListener('focusin', e=>{ const c=e.target.closest('.se-component'); if(c){current=c; document.querySelectorAll('.selected').forEach(x=>x.classList.remove('selected'));} });
+main.addEventListener('click', e=>{ const c=e.target.closest('.se-component'); if(c && !c.classList.contains('se-text')) select(c); });
+document.addEventListener('keydown', e=>{
+  const sel=document.querySelector('.se-component.selected');
+  if (e.key==='Enter' && sel){ e.preventDefault(); const t=textComp(); sel.after(t); sel.classList.remove('selected'); current=t; t.querySelector('p').focus(); }
+  if ((e.key==='s'||e.key==='S') && (e.metaKey||e.ctrlKey)){ e.preventDefault(); window.__saved=true; }
+});
+
+// 붙여넣기: html 을 컴포넌트로 바꾼다
+main.addEventListener('paste', e=>{
+  if (opt('trustedonly') && !e.isTrusted) return;          // 가짜 붙여넣기를 무시하는 경우
+  const h=e.clipboardData.getData('text/html'); if(!h) return;
+  e.preventDefault();
+  const tmp=document.createElement('div'); tmp.innerHTML=h; const out=[];
+  [...tmp.children].forEach(el=>{
+    const tag=el.tagName.toLowerCase();
+    if (tag==='hr'){ const c=document.createElement('div'); c.className='se-component se-horizontalLine'; c.innerHTML='<hr>'; out.push(c); }
+    else if (tag==='table'){ const c=document.createElement('div'); c.className='se-component se-table'; c.appendChild(el); out.push(c); }
+    else if (tag==='blockquote'){ const c=document.createElement('div'); c.className='se-component se-quotation'; c.innerHTML=el.innerHTML; out.push(c); }
+    else if (tag==='ul'||tag==='ol'){ [...el.children].forEach(li=>out.push(textComp('• '+li.innerHTML))); }
+    else out.push(textComp(el.innerHTML));
+  });
+  if (opt('pastetrailtext')) out.push(textComp(''));
+  insertAfterCurrent(out);
+}, true);
+
+// 사진
+const fi=document.getElementById('fileInput');
+document.querySelector('.se-image-toolbar-button').onclick=()=>{ if(!opt('nochooser')) fi.click(); };
+fi.onchange=()=>{
+  const files=[...fi.files]; if(!files.length) return;
+  const go=()=>{
+    const comps=files.map(f=>{ const c=document.createElement('div'); c.className='se-component se-image';
+      c.innerHTML='<img class="se-image-resource" src="'+URL.createObjectURL(f)+'">'; return c; });
+    if (opt('slowupload')) comps.forEach(c=>c.classList.add('se-is-uploading'));
+    insertAfterCurrent(comps); select(comps[comps.length-1]);
+    if (opt('slowupload')) setTimeout(()=>comps.forEach(c=>c.classList.remove('se-is-uploading')),2500);
+    fi.value='';
+  };
+  if (files.length>1){ const d=document.createElement('div'); d.className='se-popup se-image-type-popup';
+    d.innerHTML='<button>개별사진</button><button>콜라주</button>'; document.body.appendChild(d);
+    d.querySelector('button').onclick=()=>{d.remove(); go();}; }
+  else setTimeout(go, opt('slowupload')?1500:200);
+};
+// 저장
+const sb=document.getElementById('saveBtn');
+if (opt('nosavebtn')) sb.remove(); else sb.onclick=()=>{ window.__saved=true; };
+</script>

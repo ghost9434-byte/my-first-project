@@ -1,0 +1,2 @@
+<!doctype html><meta charset="utf-8"><title>login</title><p>가짜 로그인 화면 (2초 뒤 자동 로그인)</p>
+<script>setTimeout(()=>{document.cookie='loggedin=1; path=/';location.href=new URLSearchParams(location.search).get('back');},2000)</script>

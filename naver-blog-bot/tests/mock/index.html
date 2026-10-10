@@ -1,0 +1,14 @@
+<!doctype html><meta charset="utf-8"><title>mock blog</title>
+<style>html,body{margin:0;height:100%}iframe{border:0;width:100%;height:100%}</style>
+<script>
+  // 네이버처럼 글쓰기 화면을 mainFrame 안에 띄운다. ?direct=1 이면 바로 띄운다.
+  const q = location.search;
+  const p = new URLSearchParams(q);
+  if (p.get('login') === '1' && !document.cookie.includes('loggedin=1')) {
+    location.href = '/nid.naver.com/login.html?back=' + encodeURIComponent(location.pathname + q);
+  } else if (p.get('direct') === '1') {
+    location.href = '/editor.html' + q;
+  } else {
+    document.write('<iframe name="mainFrame" src="/editor.html' + q + '"></iframe>');
+  }
+</script>

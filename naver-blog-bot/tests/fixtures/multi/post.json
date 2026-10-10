@@ -1,0 +1,21 @@
+{
+ "blog_id": "test",
+ "title": "사진 여러 장 시험",
+ "blocks": [
+  {
+   "type": "html",
+   "html": "<p>첫 문단</p>"
+  },
+  {
+   "type": "image",
+   "files": [
+    "images/hongildong_title.png",
+    "images/hongildong_info.png"
+   ]
+  },
+  {
+   "type": "html",
+   "html": "<p>끝 문단</p>"
+  }
+ ]
+}
