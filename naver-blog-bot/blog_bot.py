@@ -38,11 +38,11 @@ CHROME_PATH = os.environ.get("NAVER_BOT_CHROME")
 HEADLESS = os.environ.get("NAVER_BOT_HEADLESS") == "1"
 NONINTERACTIVE = os.environ.get("NAVER_BOT_NONINTERACTIVE") == "1"
 
-SEL_TITLE = ".se-documentTitle .se-text-paragraph"
-SEL_BODY = ".se-main-container"
-SEL_COMP = ".se-main-container .se-component"
-SEL_IMAGE_COMP = ".se-main-container .se-component.se-image"
-SEL_TEXT_PARA = ".se-main-container .se-component.se-text .se-text-paragraph"
+TITLE_MARKS = [".se-documentTitle", ".se-section-documentTitle", ".se-title-text"]
+SEL_TITLE = ", ".join(f"{m} .se-text-paragraph" for m in TITLE_MARKS)
+# 편집기 본문을 감싸는 영역 (네이버 화면에 따라 이름이 다를 수 있어 차례로 찾는다)
+BODY_CANDIDATES = [".se-components-wrap", ".se-main-container", ".se-content", ".se-canvas"]
+NOT_TITLE = ":not(.se-documentTitle):not(.se-section-documentTitle)"
 SEL_IMAGE_BTNS = [
     "button.se-image-toolbar-button",
     "button[data-name='image']",
@@ -152,6 +152,7 @@ class Bot:
         self.shot_no = 0
         self.run_dir = LOG_DIR / datetime.now().strftime("%Y%m%d-%H%M%S")
         self.page = None
+        self.body_sel = ".se-components-wrap"
 
     # ---------- 공통 ----------
     def open_browser(self, pw):
@@ -256,8 +257,8 @@ class Bot:
                 print("❌ 로그인을 확인하지 못했습니다. 'bash login.sh' 를 다시 실행해 주세요.")
 
     # ---------- 글쓰기 화면 ----------
-    def editor_frame(self, page, timeout=40):
-        """글쓰기 화면은 mainFrame 안에 뜨는 경우와 바로 뜨는 경우가 있다."""
+    def editor_frame(self, page, timeout=60):
+        """글쓰기 화면이 뜬 틀(frame)을 찾고, 본문 영역 이름도 정한다."""
         end = time.time() + timeout
         while time.time() < end:
             if on_login_page(page):
@@ -270,12 +271,40 @@ class Bot:
             candidates.extend(f for f in page.frames if f not in candidates)
             for target in candidates:
                 try:
-                    if target.locator(".se-documentTitle").count() > 0 and target.locator(SEL_BODY).count() > 0:
-                        return target
+                    if not any(target.locator(m).count() > 0 for m in TITLE_MARKS):
+                        continue
+                    for body in BODY_CANDIDATES:
+                        if target.locator(f"{body} .se-component").count() > 0:
+                            self.body_sel = body
+                            return target
                 except Exception:
                     pass
             self.wait(0.5)
-        raise BotError("글쓰기 화면을 찾지 못했습니다. (네이버 화면이 바뀌었을 수 있습니다)")
+        self.diagnose(page)
+        raise BotError("글쓰기 화면을 찾지 못했습니다. (진단 기록을 남겼습니다)")
+
+    def diagnose(self, page):
+        """글쓰기 화면을 못 찾았을 때 클로드가 고칠 수 있도록 화면 구조를 기록한다."""
+        self.run_dir.mkdir(parents=True, exist_ok=True)
+        keys = ["se-documentTitle", "se-section-documentTitle", "se-title-text", "se-components-wrap",
+                "se-main-container", "se-content", "se-canvas", "se-component", "se-text-paragraph",
+                "se-image-toolbar-button", "se-popup", "se-help-panel"]
+        lines = [f"top: {page.url}"]
+        for i, f in enumerate(page.frames):
+            try:
+                counts = f.evaluate("ks => ks.map(k => k + '=' + document.getElementsByClassName(k).length).join(' ')", keys)
+                title = f.evaluate("() => document.title")
+                lines.append(f"frame{i} name={f.name!r} url={f.url[:120]} title={title!r}\n   {counts}")
+                html = f.content()
+                (self.run_dir / f"frame{i}.html").write_text(html[:400000], encoding="utf-8")
+            except Exception as e:
+                lines.append(f"frame{i} url={f.url[:120]} (읽기 실패: {e})")
+        report = "\n".join(lines)
+        (self.run_dir / "진단.txt").write_text(report, encoding="utf-8")
+        self.shot("diagnose")
+        print("\n----- 진단 기록 (이 부분을 캡처해서 클로드에게 보내 주세요) -----")
+        print(report)
+        print("-----------------------------------------------------------")
 
     def wait_for_login(self, page, minutes=10):
         """회장님이 크롬 창에서 로그인할 때까지 기다린다. 로그인 쿠키가 생기면 바로 넘어간다."""
@@ -338,9 +367,15 @@ class Bot:
                 pass
 
     # ---------- 본문 넣기 ----------
+    def sel_comp(self, extra=""):
+        return f"{self.body_sel} .se-component{NOT_TITLE}{extra}"
+
+    def sel_text_para(self):
+        return f"{self.body_sel} .se-component.se-text{NOT_TITLE} .se-text-paragraph"
+
     def body_length(self, fr):
         try:
-            return fr.locator(SEL_BODY).first.evaluate("e => e.innerText.replace(/\\s/g,'').length")
+            return fr.locator(self.body_sel).first.evaluate("e => e.innerText.replace(/\\s/g,'').length")
         except Exception:
             return -1
 
@@ -406,7 +441,7 @@ class Bot:
 
     def insert_images(self, fr, paths):
         page = self.page
-        before = fr.locator(SEL_IMAGE_COMP).count()
+        before = fr.locator(self.sel_comp(".se-image")).count()
         files = [str(p) for p in paths]
         btn = self.find_image_button(fr)
         done = False
@@ -438,7 +473,7 @@ class Bot:
 
         end = time.time() + 60
         while time.time() < end:
-            if fr.locator(SEL_IMAGE_COMP).count() > before:
+            if fr.locator(self.sel_comp(".se-image")).count() > before:
                 break
             self.wait(0.5)
         else:
@@ -447,7 +482,7 @@ class Bot:
         end = time.time() + 30
         while time.time() < end:
             try:
-                if fr.locator(".se-main-container .se-image-uploading, .se-main-container .se-is-uploading").count() == 0:
+                if fr.locator(f"{self.body_sel} .se-image-uploading, {self.body_sel} .se-is-uploading").count() == 0:
                     break
             except Exception:
                 break
@@ -457,7 +492,7 @@ class Bot:
     def cursor_to_end(self, fr):
         """커서를 본문 맨 끝 빈 줄로 옮긴다. 마지막이 글이 아니면 새 줄을 만든다."""
         page = self.page
-        last = fr.locator(SEL_COMP).last
+        last = fr.locator(self.sel_comp()).last
         cls = last.get_attribute("class") or ""
         if "se-text" in cls:
             last.locator(".se-text-paragraph").last.click()
@@ -468,7 +503,7 @@ class Bot:
         self.wait(0.3)
         page.keyboard.press("Enter")
         self.wait(0.5)
-        last = fr.locator(SEL_COMP).last
+        last = fr.locator(self.sel_comp()).last
         if "se-text" in (last.get_attribute("class") or ""):
             last.locator(".se-text-paragraph").last.click()
             page.keyboard.press("End")
@@ -525,7 +560,7 @@ class Bot:
                 self.say(f"제목을 넣었습니다: {got}")
 
                 # 본문 첫 줄로
-                fr.locator(SEL_TEXT_PARA).first.click()
+                fr.locator(self.sel_text_para()).first.click()
 
                 for i, block in enumerate(data["blocks"], 1):
                     kind = block["type"]
@@ -543,16 +578,16 @@ class Bot:
                     self.say(f"{i}번째 내용을 넣었습니다 ({how}).")
 
                 img_need = sum(len(b["files"]) if "files" in b else 1 for b in data["blocks"] if b["type"] == "image")
-                img_got = fr.locator(".se-main-container .se-component.se-image img, .se-main-container .se-image-resource").count()
+                img_got = fr.locator(self.sel_comp(".se-image")).count()
                 saved = self.save_draft(fr)
                 self.shot("saved" if saved else "save-check")
                 dump = os.environ.get("NAVER_BOT_DUMP")
                 if dump:  # 시험용: 편집기 상태 기록
-                    state = fr.evaluate("""() => ({
+                    state = fr.evaluate("""sel => ({
                         title: document.querySelector('.se-documentTitle .se-text-paragraph').innerText,
-                        comps: [...document.querySelectorAll('.se-main-container .se-component')].map(c => ({cls: c.className, text: c.innerText})),
+                        comps: [...document.querySelectorAll(sel)].map(c => ({cls: c.className, text: c.innerText})),
                         saved: !!window.__saved,
-                    })""")
+                    })""", self.sel_comp())
                     Path(dump).write_text(json.dumps(state, ensure_ascii=False, indent=1), encoding="utf-8")
             except BotError:
                 self.shot("error")

@@ -102,6 +102,8 @@ def main():
         ("로그인 먼저 필요", "../tests/fixtures/basic", "login=1", True),
         ("로그인 화면이 안쪽 틀에 뜸", "../tests/fixtures/basic", "login=iframe", True),
         ("붙여넣기 뒤 빈 줄 생김", "../tests/fixtures/basic", "pastetrailtext=1", True),
+        ("실제 편집기 구조(.se-components-wrap)", "../tests/fixtures/basic", "newdom=1", True),
+        ("새 구조 + 팝업 + 로그인", "../tests/fixtures/basic", "newdom=1&popup=1&help=1&login=1", True),
         ("모든 경우 한꺼번에", "../tests/fixtures/basic", "popup=1&help=1&latepopup=1&nochooser=1&slowupload=1&pastetrailtext=1", True),
     ]
     results = []
@@ -137,7 +139,7 @@ def main():
             continue
         data = json.loads((post / "post.json").read_text(encoding="utf-8"))
         need = sum(len(b["files"]) if "files" in b else 1 for b in data["blocks"] if b["type"] == "image")
-        p, state = run(port, post.name, "popup=1&help=1&slowupload=1", timeout=400)
+        p, state = run(port, post.name, "newdom=1&popup=1&help=1&slowupload=1", timeout=400)
         errs = []
         if p.returncode != 0 or not state:
             errs.append(f"실패: {(p.stdout + p.stderr)[-600:]}")

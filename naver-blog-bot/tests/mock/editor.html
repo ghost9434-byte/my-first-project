@@ -22,8 +22,15 @@
 <script>
 const P = new URLSearchParams(location.search);
 const opt = k => P.get(k) === '1';
-const main = document.querySelector('.se-main-container');
-let current = main.querySelector('.se-component');     // 커서가 있는 컴포넌트
+// ?newdom=1 : 실제 편집기처럼 제목과 본문이 하나의 .se-components-wrap 안에 있는 구조
+if (opt('newdom')) {
+  const oldMain=document.querySelector('.se-main-container'), t=document.querySelector('.se-documentTitle');
+  const wrap=document.createElement('div'); wrap.className='se-components-wrap';
+  t.className='se-component se-documentTitle'; wrap.appendChild(t);
+  [...oldMain.children].forEach(c=>wrap.appendChild(c)); oldMain.replaceWith(wrap);
+}
+const main = document.querySelector('.se-main-container, .se-components-wrap');
+let current = main.querySelector('.se-component:not(.se-documentTitle)');     // 커서가 있는 컴포넌트
 let delayShown = opt('latepopup') ? 1000 : 0;
 
 // 팝업들
@@ -49,7 +56,7 @@ function insertAfterCurrent(nodes){
   current=ref;
 }
 function select(c){ document.querySelectorAll('.se-component.selected').forEach(x=>x.classList.remove('selected')); c.classList.add('selected'); current=c; }
-main.addEventListener('focusin', e=>{ const c=e.target.closest('.se-component'); if(c){current=c; document.querySelectorAll('.selected').forEach(x=>x.classList.remove('selected'));} });
+main.addEventListener('focusin', e=>{ const c=e.target.closest('.se-component:not(.se-documentTitle)'); if(c){current=c; document.querySelectorAll('.selected').forEach(x=>x.classList.remove('selected'));} });
 main.addEventListener('click', e=>{ const c=e.target.closest('.se-component'); if(c && !c.classList.contains('se-text')) select(c); });
 document.addEventListener('keydown', e=>{
   const sel=document.querySelector('.se-component.selected');
