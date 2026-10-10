@@ -100,6 +100,7 @@ def main():
         ("사진 업로드가 느림", "../tests/fixtures/basic", "slowupload=1", True),
         ("저장 버튼 없음 → 단축키", "../tests/fixtures/basic", "nosavebtn=1", True),
         ("로그인 먼저 필요", "../tests/fixtures/basic", "login=1", True),
+        ("로그인 화면이 안쪽 틀에 뜸", "../tests/fixtures/basic", "login=iframe", True),
         ("붙여넣기 뒤 빈 줄 생김", "../tests/fixtures/basic", "pastetrailtext=1", True),
         ("모든 경우 한꺼번에", "../tests/fixtures/basic", "popup=1&help=1&latepopup=1&nochooser=1&slowupload=1&pastetrailtext=1", True),
     ]

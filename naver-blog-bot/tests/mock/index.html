@@ -4,7 +4,10 @@
   // 네이버처럼 글쓰기 화면을 mainFrame 안에 띄운다. ?direct=1 이면 바로 띄운다.
   const q = location.search;
   const p = new URLSearchParams(q);
-  if (p.get('login') === '1' && !document.cookie.includes('loggedin=1')) {
+  if (p.get('login') === 'iframe' && !document.cookie.includes('loggedin=1')) {
+    // 로그인 화면이 안쪽 틀(iframe)에 뜨는 경우
+    document.write('<iframe name="mainFrame" src="/nid.naver.com/login.html?back=' + encodeURIComponent('/editor.html' + q) + '"></iframe>');
+  } else if (p.get('login') === '1' && !document.cookie.includes('loggedin=1')) {
     location.href = '/nid.naver.com/login.html?back=' + encodeURIComponent(location.pathname + q);
   } else if (p.get('direct') === '1') {
     location.href = '/editor.html' + q;

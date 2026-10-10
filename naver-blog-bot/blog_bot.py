@@ -128,6 +128,14 @@ def login_state(ctx):
     return "kept" if any(c.get("expires", -1) not in (-1, None) and c["expires"] > 0 for c in aut) else "session"
 
 
+def on_login_page(page):
+    """로그인 화면이 창 전체나 안쪽 틀(iframe) 어디에든 떠 있는지."""
+    try:
+        return any("nid.naver.com" in (f.url or "") for f in page.frames)
+    except Exception:
+        return "nid.naver.com" in page.url
+
+
 def html_to_plain(h):
     t = re.sub(r"<br\s*/?>", "\n", h)
     t = re.sub(r"<hr\s*/?>", "\n", t)
@@ -148,7 +156,13 @@ class Bot:
     # ---------- 공통 ----------
     def open_browser(self, pw):
         PROFILE_DIR.mkdir(parents=True, exist_ok=True)
-        opts = dict(headless=HEADLESS, no_viewport=True, args=["--start-maximized"])
+        opts = dict(
+            headless=HEADLESS,
+            no_viewport=True,
+            args=["--start-maximized", "--disable-blink-features=AutomationControlled"],
+            # '자동화된 소프트웨어가 제어 중' 표시를 끈다 (네이버 로그인 화면이 막히지 않도록)
+            ignore_default_args=["--enable-automation"],
+        )
         if CHROME_PATH:
             opts["executable_path"] = CHROME_PATH
         else:
@@ -213,31 +227,40 @@ class Bot:
     def login(self):
         with sync_playwright() as pw:
             ctx, page = self.open_browser(pw)
+            if login_state(ctx) == "kept":
+                ctx.close()
+                print("✅ 이미 로그인되어 있습니다. 바로 글을 올리시면 됩니다.")
+                return
             page.goto("https://nid.naver.com/nidlogin.login")
-            print("\n열린 크롬 창에서 네이버에 로그인해 주세요.")
-            print("로그인 버튼 아래 '로그인 상태 유지'에 꼭 체크해 주세요. 체크하지 않으면 창을 닫을 때 로그인이 풀립니다.")
-            for _ in range(3):
-                self.wait_enter("로그인을 마치셨으면 여기서 엔터를 누르세요... ")
+            for attempt in range(2):
+                if not self.wait_for_login(page):
+                    break
+                self.wait(2)
                 state = login_state(ctx)
                 if state == "kept":
                     ctx.close()
                     print("✅ 로그인이 저장되었습니다. 다음부터는 로그인 없이 바로 진행됩니다.")
                     return
-                if state == "none":
-                    print("⚠️ 아직 로그인이 안 된 것 같습니다. 크롬 창에서 로그인을 마친 뒤 다시 엔터를 눌러 주세요.")
-                else:
-                    print("⚠️ '로그인 상태 유지'가 꺼져 있습니다. 이대로 두면 창을 닫을 때 로그인이 풀립니다.")
-                    print("   크롬 창에서 로그아웃한 뒤 '로그인 상태 유지'에 체크하고 다시 로그인해 주세요.")
+                if state == "session" and attempt == 0:
+                    print("⚠️ '로그인 상태 유지'가 꺼져 있습니다. 이대로면 창을 닫을 때 로그인이 풀립니다.")
+                    print("   열린 창에서 '로그인 상태 유지'에 체크하고 한 번 더 로그인해 주세요.")
+                    ctx.clear_cookies()
                     page.goto("https://nid.naver.com/nidlogin.login")
+                    continue
+                break
+            state = login_state(ctx)
             ctx.close()
-            print("❌ 로그인 저장을 확인하지 못했습니다. 'bash login.sh' 를 다시 실행해 주세요.")
+            if state == "session":
+                print("⚠️ 로그인은 됐지만 '로그인 상태 유지'가 꺼져 있습니다. 글 올릴 때 다시 로그인하라고 나올 수 있습니다.")
+            else:
+                print("❌ 로그인을 확인하지 못했습니다. 'bash login.sh' 를 다시 실행해 주세요.")
 
     # ---------- 글쓰기 화면 ----------
     def editor_frame(self, page, timeout=40):
         """글쓰기 화면은 mainFrame 안에 뜨는 경우와 바로 뜨는 경우가 있다."""
         end = time.time() + timeout
         while time.time() < end:
-            if "nid.naver.com" in page.url:
+            if on_login_page(page):
                 return None
             candidates = []
             fr = page.frame(name="mainFrame")
@@ -254,18 +277,39 @@ class Bot:
             self.wait(0.5)
         raise BotError("글쓰기 화면을 찾지 못했습니다. (네이버 화면이 바뀌었을 수 있습니다)")
 
+    def wait_for_login(self, page, minutes=10):
+        """회장님이 크롬 창에서 로그인할 때까지 기다린다. 로그인 쿠키가 생기면 바로 넘어간다."""
+        try:
+            page.bring_to_front()
+        except Exception:
+            pass
+        print(f"\n네이버 로그인이 필요합니다. 자동화용 크롬 창에서 로그인해 주세요. (최대 {minutes}분 기다립니다)")
+        print("  · 크롬 창이 안 보이면 ⌘+Tab 으로 크롬을 찾아 주세요.")
+        print("  · '로그인 상태 유지'에 체크하시면 다음부터는 이 단계가 없습니다.")
+        print("  · '새로운 기기' 확인 화면이 나오면 '등록' 또는 '등록 안함'을 눌러 주세요.")
+        end = time.time() + minutes * 60
+        last_note = time.time()
+        while time.time() < end:
+            if login_state(page.context) != "none" or not on_login_page(page):
+                self.wait(1.5)  # 로그인 뒤 넘어가는 화면이 끝나도록 잠깐 기다림
+                return True
+            if time.time() - last_note > 30:
+                left = int((end - time.time()) // 60)
+                print(f"  …기다리는 중 (약 {left}분 남음) 현재 화면: {page.url[:70]}", flush=True)
+                self.shot("login-wait")
+                last_note = time.time()
+            self.wait(1)
+        return False
+
     def open_editor(self, page, write_url):
         page.goto(write_url, wait_until="domcontentloaded")
         fr = self.editor_frame(page)
         if fr is None:
-            print("\n네이버 로그인이 필요합니다. 열린 창에서 로그인해 주세요. (최대 5분 기다립니다)")
-            end = time.time() + 300
-            while time.time() < end and "nid.naver.com" in page.url:
-                self.wait(1)
-            if "nid.naver.com" in page.url:
+            if not self.wait_for_login(page):
                 raise BotError("로그인이 끝나지 않았습니다. 'bash login.sh' 로 먼저 로그인해 주세요.")
             if login_state(page.context) == "session":
                 print("⚠️ '로그인 상태 유지'가 꺼져 있어, 이번 작업이 끝나면 로그인이 풀립니다. 다음엔 체크해 주세요.")
+            print("✅ 로그인 확인. 글쓰기 화면으로 갑니다.")
             page.goto(write_url, wait_until="domcontentloaded")
             fr = self.editor_frame(page)
             if fr is None:
