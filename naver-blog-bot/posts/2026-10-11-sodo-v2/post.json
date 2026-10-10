@@ -5,7 +5,7 @@
  "blocks": [
   {
    "type": "image",
-   "file": "images/sodo_title.png"
+   "file": "images/cover.jpg"
   },
   {
    "type": "html",
