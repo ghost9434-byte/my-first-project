@@ -6,8 +6,8 @@ posts/<글폴더>/post.json 에 적힌 제목·본문·사진을 네이버 블�
 사용법:
     python3 blog_bot.py login                    # 처음 한 번: 전용 크롬 창에서 네이버 로그인
     python3 blog_bot.py post                     # 아직 안 올린 글 중 가장 오래된 것을 임시저장
-    python3 blog_bot.py post 2026-10-10-hongildong --step   # 특정 글, 단계마다 멈춰서 확인
-    python3 blog_bot.py check 2026-10-10-hongildong         # 글 파일만 점검 (브라우저 안 띄움)
+    python3 blog_bot.py post 2026-10-10-sodo --step   # 특정 글, 단계마다 멈춰서 확인
+    python3 blog_bot.py check 2026-10-10-sodo         # 글 파일만 점검 (브라우저 안 띄움)
 """
 
 import argparse

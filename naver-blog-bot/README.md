@@ -45,7 +45,7 @@
 4. 첫 시험 (단계마다 멈추며 확인)
 
    ```
-   bash ~/blog-bot/naver-blog-bot/post.sh 2026-10-10-hongildong --step
+   bash ~/blog-bot/naver-blog-bot/post.sh 2026-10-10-sodo --step
    ```
 
    - 단계마다 터미널에서 엔터를 눌러 넘어갑니다.
