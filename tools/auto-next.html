@@ -31,6 +31,18 @@
   </div>
 
   <div class="card">
+    <p style="margin-top:0"><b>북마크바가 없는 학습창(팝업 창)일 때</b></p>
+    <ol>
+      <li>아래 <b>코드 복사</b>를 누릅니다.</li>
+      <li>학습창을 한 번 클릭한 뒤 <b>⌥ Option + ⌘ Command + J</b> 를 누르면 오른쪽(또는 아래)에 개발자 창이 열립니다.</li>
+      <li>맨 아래 <b>&gt;</b> 표시 옆을 클릭하고 <b>⌘ + V</b> 로 붙여 넣은 뒤 <b>엔터</b>.<br>
+          처음 한 번은 "allow pasting" 을 직접 쳐 넣고 엔터를 누르라는 영어 경고가 나옵니다. 그대로 <b>allow pasting</b> 입력 → 엔터 → 다시 ⌘ + V, 엔터.</li>
+      <li>학습창 오른쪽 아래에 파란 표시가 뜨면 성공입니다. 개발자 창은 닫아도 계속 동작합니다.</li>
+    </ol>
+    <p style="text-align:center"><a class="btn" id="copy" href="#" style="cursor:pointer">코드 복사</a> <span id="copied"></span></p>
+  </div>
+
+  <div class="card">
     <p style="margin-top:0"><b>2. 쓰는 법</b></p>
     <ol>
       <li>회사 교육 사이트에서 강의 창을 엽니다.</li>
@@ -158,6 +170,16 @@ function autoNext() {
   tick();
 }
 document.getElementById('bm').href = 'javascript:' + encodeURIComponent('(' + autoNext.toString() + ')();void 0');
+var CODE = '(' + autoNext.toString() + ')();';
+document.getElementById('copy').addEventListener('click', function (e) {
+  e.preventDefault();
+  function done() { document.getElementById('copied').textContent = '✅ 복사됐습니다'; }
+  function fallback() {
+    var t = document.createElement('textarea'); t.value = CODE; document.body.appendChild(t);
+    t.select(); document.execCommand('copy'); t.remove(); done();
+  }
+  if (navigator.clipboard) navigator.clipboard.writeText(CODE).then(done, fallback); else fallback();
+});
 document.getElementById('bm').addEventListener('click', function (e) { e.preventDefault(); alert('이 단추는 누르지 말고 북마크바로 끌어다 놓아 주세요.'); });
 </script>
 </body>
