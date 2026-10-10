@@ -31,6 +31,9 @@ POSTED_FILE = BASE / ".posted"  # 이 맥에서 이미 임시저장한 글 목�
 MOD = "Meta" if sys.platform == "darwin" else "Control"
 DOC_END = "Meta+ArrowDown" if sys.platform == "darwin" else "Control+End"
 IMAGE_EXT = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic", ".bmp"}
+VIDEO_EXT = {".mp4", ".mov", ".m4v", ".avi", ".wmv", ".mkv", ".mpg", ".mpeg", ".3gp", ".webm"}
+# 동영상은 네이버 서버로 올라가는 데 시간이 걸린다 (큰 파일은 몇 분)
+VIDEO_TIMEOUT = int(os.environ.get("NAVER_BOT_VIDEO_TIMEOUT", "900"))
 
 # 시험용 설정 (평소에는 쓰지 않음)
 WRITE_URL_OVERRIDE = os.environ.get("NAVER_BOT_WRITE_URL")
@@ -49,6 +52,21 @@ SEL_IMAGE_BTNS = [
     "button[data-log='dot.img']",
     "button:has-text('사진')",
 ]
+SEL_VIDEO_BTNS = [
+    "button.se-video-toolbar-button",
+    "button[data-name='video']",
+    "button[data-log='dot.video']",
+    "button:has-text('동영상')",
+]
+# 동영상 올리기 창 안의 버튼·칸 (네이버 화면이 바뀔 수 있어 여러 이름으로 찾는다)
+SEL_VIDEO_ADD = ["[class*='nvu_btn_append']", "button:has-text('동영상 추가')", "label:has-text('동영상 추가')",
+                 "button:has-text('파일 선택')", "button:has-text('내 PC')", "button:has-text('추가')"]
+SEL_VIDEO_TITLE = ["[class*='nvu_inp_title'] input", "input[class*='nvu_inp_title']", "input[placeholder*='제목']"]
+SEL_VIDEO_DESC = ["[class*='nvu_inp_desc'] textarea", "textarea[placeholder*='정보']", "textarea[placeholder*='설명']",
+                  "textarea[placeholder*='소개']"]
+SEL_VIDEO_DONE = ["[class*='nvu_btn_submit']", "button:has-text('완료')", "button:has-text('등록')",
+                  "button:has-text('올리기')", "button:has-text('확인')"]
+SEL_VIDEO_COMP = ".se-video, .se-oglink-video, [class*='se-component-video']"
 
 
 class BotError(RuntimeError):
@@ -121,6 +139,14 @@ def load_post(folder):
                     problems.append(f"{i}번째 사진 파일이 없습니다: {f}")
                 elif p.suffix.lower() not in IMAGE_EXT:
                     problems.append(f"{i}번째 사진 형식이 이상합니다: {f}")
+        elif kind == "video":
+            f = b.get("file")
+            if not f:
+                problems.append(f"{i}번째 동영상 블록에 파일 이름이 없습니다")
+            elif not (post_dir / f).exists():
+                problems.append(f"{i}번째 동영상 파일이 없습니다: {f}")
+            elif (post_dir / f).suffix.lower() not in VIDEO_EXT:
+                problems.append(f"{i}번째 동영상 형식이 이상합니다: {f}")
         elif kind == "html":
             if not b.get("html", "").strip():
                 problems.append(f"{i}번째 글 블록이 비어 있습니다")
@@ -477,7 +503,11 @@ class Bot:
                 done = False
         if not done:
             # 버튼이 파일 창을 안 띄우면 숨은 파일 입력칸에 바로 넣는다
-            inputs = fr.locator("input[type=file]")
+            # 사진용 칸을 먼저 고른다 (동영상용 칸에 사진을 넣지 않도록)
+            for sel in ["input[type=file][accept*='image']", "input[type=file]:not([accept*='video'])"]:
+                inputs = fr.locator(sel)
+                if inputs.count():
+                    break
             if inputs.count() == 0:
                 raise BotError("사진 버튼을 찾지 못했습니다. (네이버 화면이 바뀌었을 수 있습니다)")
             inputs.last.set_input_files(files)
@@ -510,6 +540,158 @@ class Bot:
                 break
             self.wait(0.5)
         self.wait(1.0)
+
+    # ---------- 동영상 ----------
+    def all_frames(self, fr):
+        return [fr] + [f for f in self.page.frames if f != fr]
+
+    def find_visible(self, fr, sels, enabled=False):
+        """편집기와 다른 모든 틀에서, 보이는 첫 번째 요소를 찾는다."""
+        for sel in sels:
+            for f in self.all_frames(fr):
+                try:
+                    loc = f.locator(sel)
+                    for i in range(min(loc.count(), 5)):
+                        el = loc.nth(i)
+                        if not el.is_visible():
+                            continue
+                        if enabled and (not el.is_enabled() or "disable" in (el.get_attribute("class") or "")
+                                        or el.get_attribute("aria-disabled") == "true"):
+                            continue
+                        return el
+                except Exception:
+                    pass
+        return None
+
+    def video_uploading(self, fr):
+        """올리는 중 표시(숫자 %, '업로드 중')가 보이면 True."""
+        js = r"""() => [...document.querySelectorAll('body *')].some(e => {
+            if (e.children.length || !e.offsetParent) return false;
+            const t = (e.innerText || '').trim();
+            return /^(\d{1,2}(\.\d+)?\s*%|.*업로드\s*중.*|.*올리는\s*중.*)$/.test(t);
+        })"""
+        for f in self.all_frames(fr):
+            try:
+                if f.evaluate(js):
+                    return True
+            except Exception:
+                pass
+        return False
+
+    def insert_video(self, fr, path, title="", desc=""):
+        """동영상 버튼 → 파일 고르기 → 제목·설명 → 다 올라가면 '완료'."""
+        page = self.page
+        comp = self.sel_comp("") + ":is(" + SEL_VIDEO_COMP + ")"
+        before = fr.locator(comp).count()
+        btn = self.find_visible(fr, SEL_VIDEO_BTNS)
+        if btn is None:
+            raise BotError("동영상 버튼을 찾지 못했습니다. (네이버 화면이 바뀌었을 수 있습니다)")
+        chosen = False
+        try:  # 버튼이 바로 파일 창을 띄우는 경우
+            with page.expect_file_chooser(timeout=5000) as fc:
+                btn.click(timeout=5000)
+            fc.value.set_files(str(path))
+            chosen = True
+        except PWTimeout:
+            pass
+        self.wait(1.0)
+        if not chosen:  # '동영상 올리기' 창이 뜬 경우 → '동영상 추가'
+            add = self.find_visible(fr, SEL_VIDEO_ADD)
+            if add is not None:
+                try:
+                    with page.expect_file_chooser(timeout=5000) as fc:
+                        add.click(timeout=5000)
+                    fc.value.set_files(str(path))
+                    chosen = True
+                except PWTimeout:
+                    pass
+        if not chosen:  # 숨은 파일 칸에 바로 넣기 (동영상용 칸을 먼저)
+            for sel in ["input[type=file][accept*='video']", "input[type=file]:not([accept*='image'])"]:
+                for f in self.all_frames(fr):
+                    try:
+                        loc = f.locator(sel)
+                        if loc.count():
+                            loc.last.set_input_files(str(path))
+                            chosen = True
+                            break
+                    except Exception:
+                        pass
+                if chosen:
+                    break
+        if not chosen:
+            raise BotError("동영상 파일을 고르는 칸을 찾지 못했습니다.")
+        self.shot("video-chosen")
+        print(f"  동영상을 올리는 중입니다: {Path(path).name} (큰 파일은 몇 분 걸립니다)", flush=True)
+
+        # 제목·설명 (제목은 네이버가 꼭 요구한다)
+        self.wait(1.5)
+        t = self.find_visible(fr, SEL_VIDEO_TITLE)
+        if t is not None and title:
+            try:
+                t.fill(title[:60])
+            except Exception:
+                pass
+        d = self.find_visible(fr, SEL_VIDEO_DESC)
+        if d is not None and desc:
+            try:
+                d.fill(desc)
+            except Exception:
+                pass
+
+        # 다 올라가서 '완료'가 눌릴 수 있을 때까지 기다린다
+        start = time.time()
+        end = start + VIDEO_TIMEOUT
+        last_note = start
+        clicked = False
+        while time.time() < end:
+            if fr.locator(comp).count() > before:  # 올리기 창 없이 바로 본문에 들어간 경우
+                clicked = True
+                break
+            # 올리기가 시작되기도 전에 '완료'를 누르지 않도록 처음 3초는 기다린다
+            if time.time() - start > 3 and not self.video_uploading(fr):
+                done = self.find_visible(fr, SEL_VIDEO_DONE, enabled=True)
+                if done is not None:
+                    self.shot("video-ready")
+                    self.safe_click(done, "동영상 완료 버튼")
+                    clicked = True
+                    break
+            if time.time() - last_note > 30:
+                print(f"  …동영상 올리는 중 ({int(end - time.time()) // 60}분 더 기다릴 수 있음)", flush=True)
+                self.shot("video-uploading")
+                last_note = time.time()
+            self.wait(1.0)
+        if not clicked:
+            limit = f"{VIDEO_TIMEOUT // 60}분" if VIDEO_TIMEOUT >= 60 else f"{VIDEO_TIMEOUT}초"
+            raise BotError(f"동영상이 {limit} 안에 다 올라가지 않았습니다.")
+
+        end = time.time() + 120
+        while time.time() < end:
+            if fr.locator(comp).count() > before:
+                break
+            self.wait(1.0)
+        else:
+            raise BotError("완료를 눌렀지만 본문에 동영상이 보이지 않습니다.")
+        self.wait(1.0)
+
+    def close_video_layer(self, fr):
+        """동영상 넣기에 실패했을 때 열린 창을 닫고 본문으로 돌아온다."""
+        self.page.keyboard.press("Escape")
+        self.wait(0.5)
+        for sel in ["[class*='nvu_btn_cancel']", "[class*='nvu_btn_close']", "button:has-text('취소')",
+                    "button:has-text('닫기')", "button[class*='close']"]:
+            b = self.find_visible(fr, [sel])
+            if b is not None:
+                try:
+                    b.click(timeout=2000)
+                    self.wait(0.5)
+                except Exception:
+                    pass
+        cancel = self.find_visible(fr, ["button:has-text('확인')"])  # '업로드를 취소할까요?' 같은 물음
+        if cancel is not None:
+            try:
+                cancel.click(timeout=2000)
+            except Exception:
+                pass
 
     def safe_click(self, loc, what="편집기"):
         """사진을 넣은 직후 네이버가 투명한 선택 막(se-selection)을 덮어 클릭을 가로막는 경우가 있다.
@@ -713,8 +895,8 @@ class Bot:
         self.shot("publish-unknown")
         return False, "발행 버튼은 눌렀지만 발행 완료를 확인하지 못했습니다. 블로그에서 확인해 주세요"
 
-    def diagnose_layer(self, fr):
-        """발행 창에서 막혔을 때, 보이는 글자와 버튼을 기록한다."""
+    def diagnose_layer(self, fr, what="발행 창"):
+        """발행 창·동영상 창에서 막혔을 때, 보이는 글자와 버튼을 기록한다."""
         try:
             texts = fr.evaluate("""() => [...document.querySelectorAll('button, label, li, input')]
                 .filter(e => e.offsetParent !== null)
@@ -724,9 +906,9 @@ class Bot:
         except Exception as e:
             texts = [f"(읽기 실패: {e})"]
         self.run_dir.mkdir(parents=True, exist_ok=True)
-        (self.run_dir / "발행창_진단.txt").write_text("\n".join(texts), encoding="utf-8")
-        self.shot("publish-diagnose")
-        print("\n----- 발행 창 진단 (이 부분을 캡처해서 클로드에게 보내 주세요) -----")
+        (self.run_dir / f"{what.replace(' ', '')}_진단.txt").write_text("\n".join(texts), encoding="utf-8")
+        self.shot("layer-diagnose")
+        print(f"\n----- {what} 진단 (이 부분을 캡처해서 클로드에게 보내 주세요) -----")
         print("\n".join(texts[:40]))
         print("------------------------------------------------------------")
 
@@ -735,6 +917,7 @@ class Bot:
         post_dir, data = load_post(folder)
         write_url = WRITE_URL_OVERRIDE or f"https://blog.naver.com/{data['blog_id']}?Redirect=Write&"
         report = []
+        video_failed = []
 
         with sync_playwright() as pw:
             ctx, page = self.open_browser(pw)
@@ -764,6 +947,19 @@ class Bot:
                         self.insert_images(fr, [post_dir / n for n in names])
                         self.cursor_to_end(fr)
                         how = f"사진 {len(names)}장"
+                    elif kind == "video":
+                        try:
+                            self.insert_video(fr, post_dir / block["file"], block.get("title") or data["title"],
+                                              block.get("desc", ""))
+                            how = "동영상"
+                        except BotError as e:
+                            # 동영상 하나 때문에 글 전체를 버리지 않는다. 대신 발행은 하지 않는다.
+                            self.shot("video-error")
+                            self.diagnose_layer(fr, "동영상 창")
+                            self.close_video_layer(fr)
+                            video_failed.append(f"{block['file']}: {e}")
+                            how = f"동영상 실패 ({e})"
+                        self.cursor_to_end(fr)
                     else:
                         plain = block.get("plain") or html_to_plain(block["html"])
                         how = self.paste_html(fr, block["html"], plain)
@@ -774,6 +970,8 @@ class Bot:
 
                 img_need = sum(len(b["files"]) if "files" in b else 1 for b in data["blocks"] if b["type"] == "image")
                 img_got = fr.locator(self.sel_comp(".se-image")).count()
+                vid_need = sum(1 for b in data["blocks"] if b["type"] == "video")
+                vid_got = fr.locator(self.sel_comp("") + ":is(" + SEL_VIDEO_COMP + ")").count()
                 saved = self.save_draft(fr)
                 self.shot("saved" if saved else "save-check")
                 dump = os.environ.get("NAVER_BOT_DUMP")
@@ -786,7 +984,10 @@ class Bot:
                     Path(dump).write_text(json.dumps(state, ensure_ascii=False, indent=1), encoding="utf-8")
                 published, pub_msg = None, ""
                 if data.get("publish") and not self.no_publish:
-                    published, pub_msg = self.publish(fr, data.get("category"), data.get("tags") or [])
+                    if video_failed:
+                        published, pub_msg = False, "동영상을 넣지 못해 발행하지 않았습니다"
+                    else:
+                        published, pub_msg = self.publish(fr, data.get("category"), data.get("tags") or [])
             except BotError:
                 self.shot("error")
                 self.close_after_error(ctx)
@@ -801,6 +1002,10 @@ class Bot:
             for line in report:
                 print("  " + line)
             print(f"사진: 넣을 것 {img_need}장 / 화면에서 확인된 것 {img_got}장")
+            if vid_need:
+                print(f"동영상: 넣을 것 {vid_need}개 / 화면에서 확인된 것 {vid_got}개")
+            for v in video_failed:
+                print(f"⚠️ 동영상을 넣지 못했습니다 → 블로그에서 직접 넣어 주세요: {v}")
             if published:
                 print(f"✅ '{data.get('category')}' 카테고리로 발행했습니다: {pub_msg}")
             elif published is False:
@@ -817,7 +1022,8 @@ class Bot:
             print(f"단계별 화면: {self.run_dir}")
             self.wait_enter("\n창을 닫으려면 엔터를 누르세요... ")
             ctx.close()
-            return {"saved": saved, "published": published, "report": report, "img_need": img_need, "img_got": img_got}
+            return {"saved": saved, "published": published, "report": report, "img_need": img_need, "img_got": img_got,
+                    "video_failed": video_failed}
 
     def close_after_error(self, ctx):
         print(f"\n화면을 그대로 두었습니다. 문제를 확인하신 뒤 엔터를 누르면 창이 닫힙니다.")
@@ -849,7 +1055,9 @@ def main():
         elif args.cmd == "check":
             post_dir, data = load_post(args.folder)
             n_img = sum(len(b["files"]) if "files" in b else 1 for b in data["blocks"] if b["type"] == "image")
-            print(f"✅ 글 파일 정상: '{data['title']}' / 블록 {len(data['blocks'])}개 / 사진 {n_img}장")
+            n_vid = sum(1 for b in data["blocks"] if b["type"] == "video")
+            print(f"✅ 글 파일 정상: '{data['title']}' / 블록 {len(data['blocks'])}개 / 사진 {n_img}장"
+                  + (f" / 동영상 {n_vid}개" if n_vid else ""))
         else:
             folder = args.folder or next_unposted()
             if not folder:

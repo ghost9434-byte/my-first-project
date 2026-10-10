@@ -1,0 +1,13 @@
+{
+ "blog_id": "test",
+ "title": "동영상 시험",
+ "category": "목포 맛집·생활정보",
+ "tags": [],
+ "publish": true,
+ "blocks": [
+  {"type": "image", "file": "images/hongildong_title.png"},
+  {"type": "html", "html": "<p>영상 앞 문단</p>"},
+  {"type": "video", "file": "videos/clip.mp4", "title": "소도 덕자찜 끓는 모습", "desc": "목포 소도"},
+  {"type": "html", "html": "<p>영상 뒤 문단</p>"}
+ ]
+}

@@ -53,7 +53,7 @@ def run(port, folder, query, timeout=180):
 def kinds(state):
     out = []
     for c in state["comps"]:
-        for k in ("se-image", "se-horizontalLine", "se-table", "se-quotation", "se-text"):
+        for k in ("se-image", "se-video", "se-horizontalLine", "se-table", "se-quotation", "se-text"):
             if k in c["cls"]:
                 out.append(k.replace("se-", ""))
                 break
@@ -179,6 +179,40 @@ def main():
             else:
                 if "발행했습니다" in out: errs.append("발행하면 안 되는데 발행함")
                 if "발행은 하지 못했습니다" not in out: errs.append("안내 문구 없음")
+        results.append((name, errs))
+        print(("✅ " if not errs else "❌ ") + name + ("" if not errs else " " + str(errs)), flush=True)
+
+    # 동영상
+    for name, q, ok_video in [("동영상: 올리기 창 → 제목 → 완료 → 발행", "newdom=1&overlay=1", True),
+                              ("동영상: 버튼이 바로 파일 창", "newdom=1&videodirect=1", True),
+                              ("동영상: 올리는 데 오래 걸림", "newdom=1&videoslow=1&popup=1", True),
+                              ("동영상: 끝까지 안 올라감 → 글은 저장, 발행 안 함", "newdom=1&videostuck=1", False)]:
+        os.environ["NAVER_BOT_VIDEO_TIMEOUT"] = "12"
+        p, state = run(port, "../tests/fixtures/video", q)
+        os.environ.pop("NAVER_BOT_VIDEO_TIMEOUT")
+        errs = []
+        out = p.stdout
+        if p.returncode != 0 or not state:
+            errs.append(f"실패: {(out + p.stderr)[-600:]}")
+        else:
+            k = kinds(state)
+            texts = [c["text"] for c in state["comps"]]
+            if not state["saved"]: errs.append("저장 안 됨")
+            if k.count("image") != 1: errs.append(f"사진 수 {k.count('image')}")
+            if ok_video:
+                if k.count("video") != 1: errs.append(f"동영상 수 {k.count('video')}: {k}")
+                else:
+                    iv, ii = k.index("video"), k.index("image")
+                    i_after = next((i for i, t in enumerate(texts) if "영상 뒤 문단" in t), -1)
+                    if not (ii < iv < i_after): errs.append(f"순서 이상: 사진 {ii}, 동영상 {iv}, 뒤 문단 {i_after} / {k}")
+                    if "videodirect" not in q and "소도 덕자찜 끓는 모습" not in texts[iv]:
+                        errs.append(f"동영상 제목 다름: {texts[iv]!r}")
+                if "카테고리로 발행했습니다" not in out: errs.append("발행 안 됨: " + out[-300:])
+            else:
+                if k.count("video") != 0: errs.append("동영상이 들어가면 안 됨")
+                if "영상 뒤 문단" not in "".join(texts): errs.append("동영상 뒤 글이 빠짐")
+                if "발행했습니다" in out: errs.append("발행하면 안 되는데 발행함")
+                if "동영상을 넣지 못했습니다" not in out: errs.append("안내 문구 없음")
         results.append((name, errs))
         print(("✅ " if not errs else "❌ ") + name + ("" if not errs else " " + str(errs)), flush=True)
 

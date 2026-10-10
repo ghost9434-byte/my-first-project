@@ -14,6 +14,10 @@
    - 사진 폴더 위치를 모르면 회장님께 여쭙고, 알게 되면 `CLAUDE.local.md` 에 적어 둔다. (이 CLAUDE.md 는 고치지 않는다)
 2. 사진을 글 폴더로 옮긴다 (HEIC도 JPG로 바뀌고 위치정보는 지워진다):
    `cd naver-blog-bot && .venv/bin/python make_post.py <영문-글이름> <사진1> <사진2> ...`
+   - **동영상**도 같은 명령에 같이 넣으면 `videos/` 로 옮겨진다 (mp4·mov 등, 화질 그대로).
+     본문에는 `{"type": "video", "file": "videos/video01.mov", "title": "동영상 제목(필수)", "desc": "한 줄 설명"}` 블록으로 넣는다.
+     동영상은 네이버에 올라가는 데 몇 분 걸린다. 못 넣으면 글은 임시저장만 하고 발행하지 않으니, 결과를 보고 회장님께 알린다.
+     맛집 글이면 음식이 끓거나 차려지는 짧은 영상을 사진들 사이에 한 개 정도 넣는 것이 좋다. 대표 사진은 여전히 사진으로 만든다.
 3. `examples/write_post_example.py` 를 복사해 내용을 바꾸고 실행해 `post.json` 을 만든다.
    **글자는 반드시 `blog_style.py` 함수(p, head, summary_box, table, quote, hashtags 등)로만 쓴다.**
    서식을 적지 않은 글자는 네이버에서 앞 문단의 색·크기를 이어받아 깨진다.

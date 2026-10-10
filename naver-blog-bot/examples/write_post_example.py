@@ -14,9 +14,11 @@ from blog_style import gap, hashtags, head, office_footer, p, quote, summary_box
 folder = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("posts/예시")
 H = lambda s: {"type": "html", "html": s}
 I = lambda f: {"type": "image", "file": "images/" + f}
+# 동영상: V("video01.mov", "소도 덕자찜 끓는 모습", "한 줄 설명")  (제목은 꼭 넣는다)
+V = lambda f, title, desc="": {"type": "video", "file": "videos/" + f, "title": title, "desc": desc}
 
 blocks = [
-    I("sodo_title.png"),
+    I("cover.jpg"),  # make_cover.py 로 만든 대표 사진
     H(gap()
       + p("안녕하세요, 목포 비파로 SH공유오피스입니다.")
       + p("오늘은 목포에 오시면", "꼭 한 번 드셔 보시길 권하는", "덕자 이야기입니다.")

@@ -11,6 +11,8 @@
 <div class="top">
   <button class="se-image-toolbar-button se-document-toolbar-basic-button" type="button">사진</button>
   <input type="file" id="fileInput" accept="image/*" multiple style="display:none">
+  <button class="se-video-toolbar-button se-document-toolbar-basic-button" type="button">동영상</button>
+  <input type="file" id="videoInput" accept="video/*" style="display:none">
   <span style="flex:1"></span>
   <button class="save_btn__bzc5B" type="button" id="saveBtn">저장 <span>3</span></button>
   <button class="publish_btn__m9KHH" type="button">발행</button>
@@ -105,6 +107,42 @@ fi.onchange=()=>{
     d.innerHTML='<button>개별사진</button><button>콜라주</button>'; document.body.appendChild(d);
     d.querySelector('button').onclick=()=>{d.remove(); go();}; }
   else setTimeout(go, opt('slowupload')?1500:200);
+};
+// 동영상 (?videodirect=1 : 버튼이 바로 파일 창, ?videostuck=1 : 50%에서 멈춤, ?videoslow=1 : 6초 걸림)
+const vi=document.getElementById('videoInput');
+let vlayer=null;
+function videoDone(title){
+  const c=document.createElement('div'); c.className='se-component se-video';
+  c.innerHTML='<div class="se-video-title">동영상: '+title+'</div>';
+  insertAfterCurrent([c]); select(c); window.__videoTitles=(window.__videoTitles||[]).concat([title]);
+  if (vlayer){ vlayer.remove(); vlayer=null; }
+}
+function openVideoLayer(){
+  vlayer=document.createElement('div'); vlayer.className='se-popup-video nvu_layer';
+  vlayer.style.cssText='position:fixed;left:20%;top:15%;width:420px;background:#fff;border:2px solid #333;padding:14px;z-index:30';
+  vlayer.innerHTML='<strong>동영상 올리기</strong><div><button type="button" class="nvu_btn_append">동영상 추가</button></div>'+
+    '<div class="nvu_progress"></div><div class="nvu_inp_title"><input placeholder="제목을 입력해 주세요" value=""></div>'+
+    '<div class="nvu_inp_desc"><textarea placeholder="동영상 정보를 입력해 주세요"></textarea></div>'+
+    '<button type="button" class="nvu_btn_cancel">취소</button><button type="button" class="nvu_btn_submit" disabled>완료</button>';
+  document.body.appendChild(vlayer);
+  vlayer.querySelector('.nvu_btn_append').onclick=()=>vi.click();
+  vlayer.querySelector('.nvu_btn_cancel').onclick=()=>{ vlayer.remove(); vlayer=null; };
+  vlayer.querySelector('.nvu_btn_submit').onclick=()=>{
+    const t=vlayer.querySelector('.nvu_inp_title input').value.trim();
+    if(!t){ alert('제목을 입력해 주세요'); return; }
+    window.__videoDesc=vlayer.querySelector('textarea').value; videoDone(t); };
+}
+document.querySelector('.se-video-toolbar-button').onclick=()=>{ if(opt('videodirect')) vi.click(); else openVideoLayer(); };
+vi.onchange=()=>{
+  const f=vi.files[0]; if(!f) return; vi.value='';
+  if (opt('videodirect')) { videoDone(f.name); return; }
+  const prog=vlayer.querySelector('.nvu_progress'), sub=vlayer.querySelector('.nvu_btn_submit');
+  vlayer.querySelector('.nvu_inp_title input').value='';
+  let pct=0; const total=opt('videoslow')?6000:2500, stepMs=250;
+  const tm=setInterval(()=>{ pct=Math.min(100,pct+Math.round(100*stepMs/total));
+    if (opt('videostuck') && pct>=50) pct=50;
+    prog.innerHTML='<span class="nvu_percent">'+(pct<100? pct+'%' : '업로드 완료')+'</span>';
+    if(pct>=100){ clearInterval(tm); sub.disabled=false; } }, stepMs);
 };
 // 발행 창 (?pubtext=1 : 카테고리 이름 띄어쓰기가 다름, ?nocat=1 : 원하는 카테고리가 목록에 없음)
 const CATS = ['게시판','[필독] SH SUCCESS','프라이빗 오피스 (룸 안내)','회의실 및 라운지','오시는 길 or 입주 상담',
