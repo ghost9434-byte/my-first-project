@@ -66,10 +66,26 @@ def mark_posted(folder):
         f.write(folder + "\n")
 
 
+def shared_post_folders():
+    """GitHub로 받은 글 폴더만 (맥에서 로컬 클로드가 쓰는 중인 글은 빼기 위해).
+    git 저장소가 아니면 모든 글 폴더."""
+    import subprocess
+    try:
+        out = subprocess.run(["git", "-C", str(BASE), "ls-files", "posts"], capture_output=True, text=True, timeout=10)
+        if out.returncode == 0:
+            return {Path(f).parts[1] for f in out.stdout.splitlines() if f.endswith("/post.json") and len(Path(f).parts) >= 3}
+    except Exception:
+        pass
+    return None
+
+
 def next_unposted():
-    """아직 올리지 않은 글 가운데 가장 오래된 것을 고른다."""
+    """아직 올리지 않은 글 가운데 가장 오래된 것을 고른다. (폴더 이름 없이 실행할 때)
+    로컬 클로드가 쓰는 중인 글은 집지 않도록, GitHub로 받은 글만 고른다."""
     done = posted_set()
-    folders = sorted(p.name for p in (BASE / "posts").iterdir() if (p / "post.json").exists())
+    shared = shared_post_folders()
+    folders = sorted(p.name for p in (BASE / "posts").iterdir()
+                     if (p / "post.json").exists() and (shared is None or p.name in shared))
     todo = [f for f in folders if f not in done]
     return todo[0] if todo else None
 
