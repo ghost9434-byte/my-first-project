@@ -30,10 +30,13 @@ bash ~/blog-bot/naver-blog-bot/install_auto.sh
 bash ~/blog-bot/naver-blog-bot/install_schedule.sh
 ```
 
-- 월·수·금 오전 10시에 블로그 클로드가 사진 폴더에서 **아직 안 쓴 사진**을 골라 글을 쓰고 **임시저장**합니다.
+- 월·수·금 새벽 3시에 블로그 클로드가 사진 폴더에서 **아직 안 쓴 사진**을 골라 글을 쓰고 **임시저장**합니다.
 - 끝나면 맥 알림이 뜹니다. 블로그 앱에서 확인하고 발행만 누르시면 됩니다.
 - 사진 폴더에 새 사진을 넣어 두시면 다음 예약 때 씁니다.
 - 맥이 그 시각에 꺼져 있었으면 다음에 켜질 때 놓친 글을 씁니다.
+- 새벽에 맥이 잠들어 있으면 못 쓰므로, 맥을 2시 55분에 깨워 둡니다 (전원 연결·덮개 열림 권장):
+  `sudo pmset repeat wake MTWRFSU 02:55:00` · 확인: `pmset -g sched` · 끄기: `sudo pmset repeat cancel`
+- 잘 켜졌는지 확인: `cat ~/blog-bot/naver-blog-bot/.schedule_time` → `03:00`, `launchctl list | grep blogdraft` → 한 줄 나옴
 - 지금 한 번 시험: `bash ~/blog-bot/naver-blog-bot/scheduled_draft.sh --now` · 끄기: `uninstall_schedule.sh`
 
 ## 네이버 페이지·내 블로그 읽어 오기

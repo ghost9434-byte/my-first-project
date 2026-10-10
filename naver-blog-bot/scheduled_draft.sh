@@ -7,7 +7,7 @@ PHOTOS="${BLOG_PHOTO_DIR:-$HOME/Desktop/SH SUCCESSHUB/오피스 사진들}"
 # 매시간 깨어나서, 가장 최근 예약 시각(월·수·금 정해진 시간)의 글을 아직 안 썼으면 쓴다.
 # 그래서 그 시각에 맥이 꺼져 있었어도 다음에 켜지면 놓친 글을 쓴다. (--now 로 실행하면 바로 쓴다)
 if [ "$1" != "--now" ]; then
-  DUE=$(.venv/bin/python - "$(cat .schedule_time 2>/dev/null || echo 10:00)" "$(cat .last_schedule 2>/dev/null)" <<'PY'
+  DUE=$(.venv/bin/python - "$(cat .schedule_time 2>/dev/null || echo 03:00)" "$(cat .last_schedule 2>/dev/null)" <<'PY'
 import sys, datetime as dt
 hh, mm = map(int, sys.argv[1].split(":"))
 now = dt.datetime.now()

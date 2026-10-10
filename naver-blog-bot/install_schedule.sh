@@ -1,7 +1,7 @@
 #!/bin/bash
-# 월·수·금 오전 10시에 예약 글쓰기(임시저장까지)를 등록한다. 시간 바꾸기: bash install_schedule.sh 9 30  (9시 30분)
+# 월·수·금 새벽 3시에 예약 글쓰기(임시저장까지)를 등록한다. 시간 바꾸기: bash install_schedule.sh 9 30  (9시 30분)
 BOT_DIR="$(cd "$(dirname "$0")" && pwd)"
-HOUR="${1:-10}"; MIN="${2:-0}"
+HOUR="${1:-3}"; MIN="${2:-0}"
 LABEL="com.shsuccesshub.blogdraft"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 mkdir -p "$HOME/Library/LaunchAgents" "$BOT_DIR/logs"
