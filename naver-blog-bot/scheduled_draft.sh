@@ -49,7 +49,7 @@ if ! command -v claude >/dev/null 2>&1; then
   exit 1
 fi
 
-OUT=$(cd .. && claude -p "$(cat naver-blog-bot/schedule_prompt.md)" \
+OUT=$(cd .. && claude --no-chrome -p "$(cat naver-blog-bot/schedule_prompt.md)" \
         --permission-mode acceptEdits \
         --allowedTools "Read" "Write" "Edit" "Glob" "Grep" "Bash" 2>&1)
 echo "$OUT" >> "$LOG"
