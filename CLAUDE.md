@@ -73,7 +73,7 @@
 
 ## 참고
 - 설치·로그인·바로가기·자동 발행 설명: `naver-blog-bot/README.md`
-- 프로그램을 고치면 `cd naver-blog-bot && .venv/bin/python tests/run_tests.py` 로 가짜 네이버 화면 시험(23가지)을 돌려 확인한다.
+- 프로그램을 고치면 `cd naver-blog-bot && .venv/bin/python tests/run_tests.py` 로 가짜 네이버 화면 시험(26가지)을 돌려 확인한다.
 
 ## 이 맥북 전용 메모
 - 새 사진 폴더 위치처럼 이 맥북에서만 쓰는 메모는 이 파일이 아니라 `CLAUDE.local.md` 에 적는다.
