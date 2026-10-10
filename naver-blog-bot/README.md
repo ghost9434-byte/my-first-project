@@ -24,6 +24,17 @@ bash ~/blog-bot/naver-blog-bot/install_auto.sh
 - 끄기: `bash ~/blog-bot/naver-blog-bot/uninstall_auto.sh`
 - 기록: `logs/auto-날짜.log`
 
+## 예약 글쓰기 (월·수·금, 임시저장까지)
+
+```
+bash ~/blog-bot/naver-blog-bot/install_schedule.sh
+```
+
+- 월·수·금 오전 10시에 블로그 클로드가 사진 폴더에서 **아직 안 쓴 사진**을 골라 글을 쓰고 **임시저장**합니다.
+- 끝나면 맥 알림이 뜹니다. 블로그 앱에서 확인하고 발행만 누르시면 됩니다.
+- 사진 폴더에 새 사진을 넣어 두시면 다음 예약 때 씁니다.
+- 지금 한 번 시험: `bash ~/blog-bot/naver-blog-bot/scheduled_draft.sh` · 끄기: `uninstall_schedule.sh`
+
 ## 처음 한 번만 하는 준비 (10분)
 
 터미널(⌘+스페이스 → "터미널")을 열고 한 줄씩 붙여 넣으세요.

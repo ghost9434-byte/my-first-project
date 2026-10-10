@@ -2,3 +2,5 @@
 logs/
 __pycache__/
 .posted
+.used_photos
+.thumbs/
