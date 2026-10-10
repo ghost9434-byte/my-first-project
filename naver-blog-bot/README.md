@@ -35,6 +35,12 @@ bash ~/blog-bot/naver-blog-bot/install_schedule.sh
 - 사진 폴더에 새 사진을 넣어 두시면 다음 예약 때 씁니다.
 - 지금 한 번 시험: `bash ~/blog-bot/naver-blog-bot/scheduled_draft.sh` · 끄기: `uninstall_schedule.sh`
 
+## 네이버 페이지·내 블로그 읽어 오기
+
+- 아무 페이지: `.venv/bin/python read_page.py <주소>` → `reads/` 에 글자(.md)와 화면(.png)
+- 내 블로그 글 전체: `.venv/bin/python read_blog.py` → `blog_snapshot/posts.md`
+- 블로그 대화에서 "이 링크 읽어 줘", "내 블로그 글들 읽고 분석해 줘"라고 하시면 클로드가 이걸 씁니다.
+
 ## 처음 한 번만 하는 준비 (10분)
 
 터미널(⌘+스페이스 → "터미널")을 열고 한 줄씩 붙여 넣으세요.
