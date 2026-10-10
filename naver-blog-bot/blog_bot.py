@@ -136,6 +136,11 @@ def on_login_page(page):
         return "nid.naver.com" in page.url
 
 
+def norm(t):
+    """카테고리 이름 비교용: 공백과 가운뎃점 모양 차이를 없앤다."""
+    return re.sub(r"[\s·・･.ㆍ‧∙•]", "", t or "")
+
+
 def html_to_plain(h):
     t = re.sub(r"<br\s*/?>", "\n", h)
     t = re.sub(r"<hr\s*/?>", "\n", t)
@@ -147,8 +152,9 @@ def html_to_plain(h):
 
 
 class Bot:
-    def __init__(self, step=False):
+    def __init__(self, step=False, no_publish=False):
         self.step = step
+        self.no_publish = no_publish
         self.shot_no = 0
         self.run_dir = LOG_DIR / datetime.now().strftime("%Y%m%d-%H%M%S")
         self.page = None
@@ -574,6 +580,140 @@ class Bot:
         except Exception:
             return False
 
+    # ---------- 발행 ----------
+    def publish(self, fr, category, tags):
+        """발행 창을 열어 카테고리를 고르고 태그를 넣은 뒤 발행한다.
+        카테고리를 못 찾으면 발행하지 않고 창을 닫는다(임시저장은 이미 되어 있음)."""
+        page = self.page
+        opened = False
+        for loc in [fr.locator("button[class*='publish_btn']"),
+                    fr.get_by_role("button", name=re.compile(r"^\s*발행\s*$")),
+                    page.locator("button[class*='publish_btn']")]:
+            try:
+                if loc.count() > 0 and loc.first.is_visible():
+                    self.safe_click(loc.first, "발행 버튼")
+                    opened = True
+                    break
+            except Exception:
+                pass
+        if not opened:
+            return False, "발행 버튼을 찾지 못했습니다"
+        self.wait(1.5)
+        self.shot("publish-layer")
+
+        # 카테고리
+        if category:
+            want = norm(category)
+            sel_btn = None
+            for loc in [fr.locator("button[class*='selectbox_button']"),
+                        fr.locator("[class*='publish'] button[aria-haspopup]"),
+                        fr.locator("button[class*='category']")]:
+                try:
+                    if loc.count() > 0 and loc.first.is_visible():
+                        sel_btn = loc.first
+                        break
+                except Exception:
+                    pass
+            if sel_btn is None:
+                self.diagnose_layer(fr)
+                return False, "카테고리 선택 칸을 찾지 못했습니다"
+            if norm(sel_btn.inner_text()) != want:
+                self.safe_click(sel_btn, "카테고리 선택 칸")
+                self.wait(0.8)
+                picked = False
+                gap_chars = r"[\s·・･.ㆍ‧∙•]*"
+                pattern = re.compile("^" + gap_chars + gap_chars.join(re.escape(ch) for ch in want) + gap_chars + "$")
+                options = fr.get_by_text(pattern)
+                for i in range(min(options.count(), 10)):
+                    o = options.nth(i)
+                    try:
+                        if o.is_visible():
+                            self.safe_click(o, "카테고리")
+                            picked = True
+                            self.wait(0.4)
+                            if norm(sel_btn.inner_text()) == want:
+                                break
+                    except Exception:
+                        pass
+                self.wait(0.6)
+                if not picked or norm(sel_btn.inner_text()) != want:
+                    self.diagnose_layer(fr)
+                    page.keyboard.press("Escape")
+                    return False, f"카테고리 '{category}'를 찾지 못했습니다"
+            print(f"  카테고리: {sel_btn.inner_text().strip()}")
+
+        # 태그
+        if tags:
+            inp = fr.locator("input[placeholder*='태그'], input[class*='tag_input']").first
+            try:
+                if inp.count() > 0 and inp.is_visible():
+                    for t in tags:
+                        self.safe_click(inp, "태그 칸")
+                        page.keyboard.insert_text(t.lstrip("#"))
+                        page.keyboard.press("Enter")
+                        self.wait(0.25)
+                    print(f"  태그: {', '.join(tags)}")
+                else:
+                    print("  ⚠️ 태그 칸을 찾지 못해 태그 없이 발행합니다.")
+            except Exception:
+                print("  ⚠️ 태그를 넣지 못해 태그 없이 발행합니다.")
+
+        dump = os.environ.get("NAVER_BOT_DUMP")
+        if dump:  # 시험용: 발행 직전 상태
+            info = fr.evaluate("""() => ({
+                category: (document.querySelector("button[class*='selectbox_button']") || {}).innerText || '',
+                tags: [...document.querySelectorAll("[class*='tag_item']")].map(e => e.innerText.trim()),
+            })""")
+            Path(dump + ".publish.json").write_text(json.dumps(info, ensure_ascii=False), encoding="utf-8")
+
+        self.shot("publish-ready")
+        self.say("카테고리와 태그를 넣었습니다. 이제 발행합니다.")
+        confirm = None
+        for loc in [fr.locator("button[data-testid='seOnePublishBtn']"),
+                    fr.locator("button[class*='confirm_btn']"),
+                    fr.get_by_role("button", name=re.compile(r"^\s*발행\s*$")).last]:
+            try:
+                if loc.count() > 0 and loc.first.is_visible():
+                    confirm = loc.first if loc.count() else loc
+                    break
+            except Exception:
+                pass
+        if confirm is None:
+            self.diagnose_layer(fr)
+            return False, "마지막 발행 버튼을 찾지 못했습니다"
+        self.safe_click(confirm, "마지막 발행 버튼")
+
+        # 글쓰기 화면이 사라지면 발행된 것
+        end = time.time() + 30
+        while time.time() < end:
+            self.wait(1)
+            try:
+                still = any(f.locator(".se-documentTitle").count() > 0 for f in page.frames)
+            except Exception:
+                still = True
+            if not still:
+                self.shot("published")
+                return True, page.url
+        self.shot("publish-unknown")
+        return False, "발행 버튼은 눌렀지만 발행 완료를 확인하지 못했습니다. 블로그에서 확인해 주세요"
+
+    def diagnose_layer(self, fr):
+        """발행 창에서 막혔을 때, 보이는 글자와 버튼을 기록한다."""
+        try:
+            texts = fr.evaluate("""() => [...document.querySelectorAll('button, label, li, input')]
+                .filter(e => e.offsetParent !== null)
+                .map(e => (e.tagName + '.' + (e.className || '').toString().slice(0, 40) + ' ' +
+                           (e.innerText || e.placeholder || '').trim().slice(0, 30)))
+                .slice(0, 80)""")
+        except Exception as e:
+            texts = [f"(읽기 실패: {e})"]
+        self.run_dir.mkdir(parents=True, exist_ok=True)
+        (self.run_dir / "발행창_진단.txt").write_text("\n".join(texts), encoding="utf-8")
+        self.shot("publish-diagnose")
+        print("\n----- 발행 창 진단 (이 부분을 캡처해서 클로드에게 보내 주세요) -----")
+        print("\n".join(texts[:40]))
+        print("------------------------------------------------------------")
+
     # ---------- 전체 흐름 ----------
     def post(self, folder):
         post_dir, data = load_post(folder)
@@ -628,6 +768,9 @@ class Bot:
                         saved: !!window.__saved,
                     })""", self.sel_comp())
                     Path(dump).write_text(json.dumps(state, ensure_ascii=False, indent=1), encoding="utf-8")
+                published, pub_msg = None, ""
+                if data.get("publish") and not self.no_publish:
+                    published, pub_msg = self.publish(fr, data.get("category"), data.get("tags") or [])
             except BotError:
                 self.shot("error")
                 self.close_after_error(ctx)
@@ -642,7 +785,12 @@ class Bot:
             for line in report:
                 print("  " + line)
             print(f"사진: 넣을 것 {img_need}장 / 화면에서 확인된 것 {img_got}장")
-            if saved:
+            if published:
+                print(f"✅ '{data.get('category')}' 카테고리로 발행했습니다: {pub_msg}")
+            elif published is False:
+                print(f"⚠️ 발행은 하지 못했습니다: {pub_msg}")
+                print("   글은 임시저장되어 있으니, 블로그에서 카테고리를 고르고 직접 발행해 주세요.")
+            elif saved:
                 print("✅ 임시저장을 눌렀습니다. 화면을 확인하신 뒤 카테고리 고르고 발행은 직접 해 주세요.")
             elif saved is None:
                 print("⚠️ 저장 버튼을 못 찾아 단축키로 저장을 시도했습니다. 화면에서 '저장'을 한 번 더 눌러 주세요.")
@@ -653,7 +801,7 @@ class Bot:
             print(f"단계별 화면: {self.run_dir}")
             self.wait_enter("\n창을 닫으려면 엔터를 누르세요... ")
             ctx.close()
-            return {"saved": saved, "report": report, "img_need": img_need, "img_got": img_got}
+            return {"saved": saved, "published": published, "report": report, "img_need": img_need, "img_got": img_got}
 
     def close_after_error(self, ctx):
         print(f"\n화면을 그대로 두었습니다. 문제를 확인하신 뒤 엔터를 누르면 창이 닫힙니다.")
@@ -673,11 +821,12 @@ def main():
     p = sub.add_parser("post", help="posts/<폴더> 글을 임시저장")
     p.add_argument("folder", nargs="?", help="생략하면 아직 안 올린 글 중 가장 오래된 것")
     p.add_argument("--step", action="store_true", help="단계마다 멈춰서 확인")
+    p.add_argument("--draft", action="store_true", help="발행하지 않고 임시저장만")
     c = sub.add_parser("check", help="글 파일만 점검")
     c.add_argument("folder")
     args = ap.parse_args()
 
-    bot = Bot(step=getattr(args, "step", False))
+    bot = Bot(step=getattr(args, "step", False), no_publish=getattr(args, "draft", False))
     try:
         if args.cmd == "login":
             bot.login()

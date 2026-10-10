@@ -1,7 +1,7 @@
 {
  "blog_id": "shsuccesshub",
  "title": "목포 맛집 | 덕자회·덕자찜 현지인 단골집 '소도' 솔직 후기",
- "note": "새 디자인 시험본입니다. 카테고리는 '목포 맛집·생활정보'. 발행 창의 태그 칸에 '목포맛집, 목포덕자, 덕자회, 덕자찜, 목포현지인맛집'을 넣어 주세요.",
+ "note": "새 디자인 비교용이라 발행하지 않고 임시저장만 합니다. 이미 발행된 소도 글과 내용이 같습니다.",
  "blocks": [
   {
    "type": "image",
@@ -71,5 +71,15 @@
    "type": "html",
    "html": "<p style=\"text-align:center;\">두부, 김치, 나물, 묵, 쌈 채소에<br>계란찜과 찌개까지 한 상 가득.</p><p style=\"text-align:center;\">손님 대접 자리로도 좋고,<br>술 한잔 곁들이는 저녁 자리로도 좋습니다.</p><p style=\"text-align:center;\"><br></p><hr><p style=\"text-align:center;font-size:13px;color:#8a8a8a;\">04</p><p style=\"text-align:center;font-size:24px;color:#2f5dd4;\"><b>메뉴와 가격</b></p><p style=\"text-align:center;\"><br></p><table border=\"1\" style=\"text-align:center;\"><tr><th>메뉴</th><th>가격</th></tr><tr><td>덕자회+찜 소</td><td>120,000원</td></tr><tr><td>덕자회+찜 중</td><td>140,000원</td></tr><tr><td>덕자회+찜 대</td><td>175,000원</td></tr></table><p style=\"text-align:center;font-size:13px;color:#8a8a8a;\">※ 2026년 10월 네이버 플레이스 기준이에요.<br>가격은 바뀔 수 있으니 방문 전 확인해 주세요.</p><p style=\"text-align:center;\"><br></p><hr><p style=\"text-align:center;font-size:13px;color:#8a8a8a;\">05</p><p style=\"text-align:center;font-size:24px;color:#2f5dd4;\"><b>방문 팁</b></p><p style=\"text-align:center;\"><br></p><p style=\"text-align:center;\">덕자는 그날 물량에 따라<br>일찍 떨어질 수 있어요.</p><p style=\"text-align:center;color:#2f5dd4;\"><b>방문 전 전화(061-281-0086) 확인</b>은 필수!</p><p style=\"text-align:center;\">세트가 회와 찜으로 함께 나오니<br>인원에 맞춰 소·중·대를 고르시면 됩니다.</p><p style=\"text-align:center;\"><br></p><hr><p style=\"text-align:center;font-size:13px;color:#8a8a8a;\">06</p><p style=\"text-align:center;font-size:24px;color:#2f5dd4;\"><b>총평</b></p><p style=\"text-align:center;\"><br></p><blockquote style=\"text-align:center;\"><p style=\"text-align:center;\">목포에서 덕자를 제대로 맛보고 싶다면<br><b>소도</b>, 자신 있게 추천드립니다.</p></blockquote><p style=\"text-align:center;\"><br></p><hr><p style=\"text-align:center;\">목포로 출장이나 미팅차 오셨다면,<br>식사 후 잠깐 일하실 공간도 필요하시죠?</p><p style=\"text-align:center;\"><b>SH 공유오피스 SUCCESS HUB</b><br>전남 목포시 비파로 123, 2층<br>24시간 연중무휴 · 010-6399-1056</p><p style=\"text-align:center;\"><br></p><p style=\"text-align:center;font-size:13px;color:#8a8a8a;\">#목포맛집 #목포덕자 #덕자회 #덕자찜 #목포현지인맛집 #목포회맛집 #목포가볼만한곳 #SH공유오피스</p>"
   }
- ]
+ ],
+ "category": "목포 맛집·생활정보",
+ "tags": [
+  "목포맛집",
+  "목포덕자",
+  "덕자회",
+  "덕자찜",
+  "목포현지인맛집",
+  "목포회맛집"
+ ],
+ "publish": false
 }

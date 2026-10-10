@@ -42,6 +42,8 @@ def run(port, folder, query, timeout=180):
     except subprocess.TimeoutExpired as e:
         p = subprocess.CompletedProcess(e.cmd, 124, (e.stdout or b"").decode(errors="ignore") if isinstance(e.stdout, bytes) else (e.stdout or ""), "시간 초과")
     state = json.loads((tmp / "state.json").read_text()) if (tmp / "state.json").exists() else None
+    if state is not None and (tmp / "state.json.publish.json").exists():
+        state["publish"] = json.loads((tmp / "state.json.publish.json").read_text())
     shutil.rmtree(tmp, ignore_errors=True)
     return p, state
 
@@ -153,6 +155,28 @@ def main():
             got_imgs = [i for i, kk in enumerate(k) if kk == "image"]
             if got_imgs != sorted(got_imgs): errs.append("사진 순서")
         name = f"실제 글: {post.name}"
+        results.append((name, errs))
+        print(("✅ " if not errs else "❌ ") + name + ("" if not errs else " " + str(errs)), flush=True)
+
+    # 발행 (카테고리·태그)
+    for name, q, expect_pub in [("발행: 카테고리·태그", "newdom=1&overlay=1", True),
+                                ("발행: 카테고리 띄어쓰기 다름", "newdom=1&pubtext=1", True),
+                                ("발행: 카테고리 없음 → 발행 안 하고 임시저장만", "newdom=1&nocat=1", False)]:
+        p, state = run(port, "../tests/fixtures/pub", q)
+        errs = []
+        out = p.stdout
+        if p.returncode != 0 or not state:
+            errs.append(f"실패: {(out + p.stderr)[-500:]}")
+        else:
+            errs += check_hongildong(state)
+            if expect_pub:
+                pub = state.get("publish") or {}
+                if "생활정보" not in pub.get("category", ""): errs.append(f"카테고리 {pub.get('category')!r}")
+                if pub.get("tags") != ["#목포맛집", "#덕자회"]: errs.append(f"태그 {pub.get('tags')}")
+                if "카테고리로 발행했습니다" not in out: errs.append("발행 완료 문구 없음: " + out[-300:])
+            else:
+                if "발행했습니다" in out: errs.append("발행하면 안 되는데 발행함")
+                if "발행은 하지 못했습니다" not in out: errs.append("안내 문구 없음")
         results.append((name, errs))
         print(("✅ " if not errs else "❌ ") + name + ("" if not errs else " " + str(errs)), flush=True)
 

@@ -106,6 +106,26 @@ fi.onchange=()=>{
     d.querySelector('button').onclick=()=>{d.remove(); go();}; }
   else setTimeout(go, opt('slowupload')?1500:200);
 };
+// 발행 창 (?pubtext=1 : 카테고리 이름 띄어쓰기가 다름, ?nocat=1 : 원하는 카테고리가 목록에 없음)
+const CATS = ['게시판','[필독] SH SUCCESS','프라이빗 오피스 (룸 안내)','회의실 및 라운지','오시는 길 or 입주 상담',
+  opt('pubtext') ? '목포 창업 정보' : '목포 창업정보','오피스 소식', opt('pubtext') ? '목포 맛집 · 생활정보' : '목포 맛집·생활정보'];
+if (opt('nocat')) CATS.pop();
+document.querySelector('.publish_btn__m9KHH').onclick=()=>{
+  if (document.querySelector('.layer_popup__i0QOY')) return;
+  const L=document.createElement('div'); L.className='layer_popup__i0QOY';
+  L.style.cssText='position:fixed;right:10px;top:50px;width:360px;background:#fff;border:1px solid #333;padding:12px;z-index:20';
+  L.innerHTML='<strong>카테고리</strong> <button type="button" class="selectbox_button__jb1Dt">게시판</button>'+
+    '<ul class="option_list__x" hidden>'+CATS.map(c=>'<li><label class="radio_label__y">'+c+'</label></li>').join('')+'</ul>'+
+    '<div><input class="tag_input__rvUB5" placeholder="#태그 입력 (최대 30개)"><span class="tags"></span></div>'+
+    '<button type="button" class="confirm_btn__WEaBq" data-testid="seOnePublishBtn">발행</button>';
+  document.body.appendChild(L);
+  const btn=L.querySelector('.selectbox_button__jb1Dt'), ul=L.querySelector('ul');
+  btn.onclick=()=>{ ul.hidden=!ul.hidden; };
+  ul.querySelectorAll('label').forEach(l=>l.onclick=()=>{ btn.innerText=l.innerText; ul.hidden=true; });
+  const ti=L.querySelector('input');
+  ti.addEventListener('keydown',e=>{ if(e.key==='Enter' && ti.value.trim()){ const t=document.createElement('span'); t.className='tag_item__z'; t.innerText='#'+ti.value.trim(); L.querySelector('.tags').appendChild(t); ti.value=''; } });
+  L.querySelector('.confirm_btn__WEaBq').onclick=()=>{ window.top.location.href='/postview.html?cat='+encodeURIComponent(btn.innerText); };
+};
 // 저장
 const sb=document.getElementById('saveBtn');
 if (opt('nosavebtn')) sb.remove(); else sb.onclick=()=>{ window.__saved=true; };

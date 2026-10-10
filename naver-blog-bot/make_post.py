@@ -39,7 +39,8 @@ def main():
     if not post.exists():
         blocks = [{"type": "image", "file": names[0]}, {"type": "html", "html": "<p>본문</p>"}]
         blocks += [{"type": "image", "file": n} for n in names[1:]]
-        post.write_text(json.dumps({"blog_id": "shsuccesshub", "title": "제목", "blocks": blocks},
+        post.write_text(json.dumps({"blog_id": "shsuccesshub", "title": "제목", "category": "목포 맛집·생활정보",
+                                    "tags": [], "publish": True, "blocks": blocks},
                                    ensure_ascii=False, indent=1), encoding="utf-8")
     print(folder)
     for n in names:
