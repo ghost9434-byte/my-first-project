@@ -115,6 +115,19 @@ def load_post(folder):
     return post_dir, data
 
 
+def login_state(ctx):
+    """네이버 로그인 쿠키(NID_AUT)로 상태를 본다.
+    kept: 로그인 상태 유지 켜짐 / session: 로그인됐지만 창을 닫으면 풀림 / none: 로그인 안 됨"""
+    try:
+        cookies = ctx.cookies("https://nid.naver.com")
+    except Exception:
+        return "none"
+    aut = [c for c in cookies if c.get("name") == "NID_AUT"]
+    if not aut:
+        return "none"
+    return "kept" if any(c.get("expires", -1) not in (-1, None) and c["expires"] > 0 for c in aut) else "session"
+
+
 def html_to_plain(h):
     t = re.sub(r"<br\s*/?>", "\n", h)
     t = re.sub(r"<hr\s*/?>", "\n", t)
@@ -202,10 +215,22 @@ class Bot:
             ctx, page = self.open_browser(pw)
             page.goto("https://nid.naver.com/nidlogin.login")
             print("\n열린 크롬 창에서 네이버에 로그인해 주세요.")
-            print("'로그인 상태 유지'에 체크하시면 다음부터는 다시 안 하셔도 됩니다.")
-            self.wait_enter("로그인을 마치셨으면 여기서 엔터를 누르세요... ")
+            print("로그인 버튼 아래 '로그인 상태 유지'에 꼭 체크해 주세요. 체크하지 않으면 창을 닫을 때 로그인이 풀립니다.")
+            for _ in range(3):
+                self.wait_enter("로그인을 마치셨으면 여기서 엔터를 누르세요... ")
+                state = login_state(ctx)
+                if state == "kept":
+                    ctx.close()
+                    print("✅ 로그인이 저장되었습니다. 다음부터는 로그인 없이 바로 진행됩니다.")
+                    return
+                if state == "none":
+                    print("⚠️ 아직 로그인이 안 된 것 같습니다. 크롬 창에서 로그인을 마친 뒤 다시 엔터를 눌러 주세요.")
+                else:
+                    print("⚠️ '로그인 상태 유지'가 꺼져 있습니다. 이대로 두면 창을 닫을 때 로그인이 풀립니다.")
+                    print("   크롬 창에서 로그아웃한 뒤 '로그인 상태 유지'에 체크하고 다시 로그인해 주세요.")
+                    page.goto("https://nid.naver.com/nidlogin.login")
             ctx.close()
-            print("✅ 로그인 정보가 자동화용 크롬 프로필에 저장되었습니다.")
+            print("❌ 로그인 저장을 확인하지 못했습니다. 'bash login.sh' 를 다시 실행해 주세요.")
 
     # ---------- 글쓰기 화면 ----------
     def editor_frame(self, page, timeout=40):
@@ -239,6 +264,8 @@ class Bot:
                 self.wait(1)
             if "nid.naver.com" in page.url:
                 raise BotError("로그인이 끝나지 않았습니다. 'bash login.sh' 로 먼저 로그인해 주세요.")
+            if login_state(page.context) == "session":
+                print("⚠️ '로그인 상태 유지'가 꺼져 있어, 이번 작업이 끝나면 로그인이 풀립니다. 다음엔 체크해 주세요.")
             page.goto(write_url, wait_until="domcontentloaded")
             fr = self.editor_frame(page)
             if fr is None:
