@@ -4,6 +4,6 @@
 cd "$(dirname "$0")"
 if git -C .. rev-parse --git-dir >/dev/null 2>&1; then
   echo "새 글 받는 중..."
-  git -C .. pull --ff-only --quiet || echo "⚠️ 새 글을 받지 못했습니다. 인터넷 연결을 확인해 주세요. (있는 글로 계속합니다)"
+  git -C .. pull --ff-only --autostash --quiet || echo "⚠️ 새 글을 받지 못했습니다. 인터넷 연결을 확인해 주세요. (있는 글로 계속합니다)"
 fi
 .venv/bin/python blog_bot.py post "$@"
