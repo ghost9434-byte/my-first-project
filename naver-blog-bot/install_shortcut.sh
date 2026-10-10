@@ -20,11 +20,12 @@ cat > "$CHAT" <<SCRIPT
 #!/bin/bash
 # 더블클릭하면 블로그 클로드 대화가 열립니다. 다 쓰셨으면 이 창을 닫으시면 됩니다.
 # 휴대폰 앱에서도 이어 쓰려면 입력 칸에 /remote-control 을 입력하세요.
+# 크롬 확장(Claude in Chrome)이 깔려 있으면 크롬도 함께 연결됩니다 (네이버는 안전 제한으로 제외).
 export PATH="\$HOME/.local/bin:/usr/local/bin:/opt/homebrew/bin:\$PATH"
 cd "$(dirname "$BOT_DIR")"
 git pull --ff-only --autostash --quiet 2>/dev/null
 clear
-claude --continue || claude
+claude --chrome --continue || claude --chrome
 SCRIPT
 chmod +x "$CHAT"
 echo "✅ 바탕화면에 '블로그 클로드' 바로가기를 만들었습니다. 필요할 때 더블클릭하면 대화가 열립니다."
