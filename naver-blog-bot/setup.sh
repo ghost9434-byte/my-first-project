@@ -16,6 +16,6 @@ fi
 
 python3 -m venv .venv
 .venv/bin/pip install --quiet --upgrade pip
-.venv/bin/pip install --quiet playwright
+.venv/bin/pip install --quiet playwright pillow pillow-heif
 echo ""
 echo "✅ 설치가 끝났습니다. 다음으로 'bash login.sh' 를 실행해 네이버에 로그인해 주세요."

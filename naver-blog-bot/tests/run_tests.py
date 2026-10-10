@@ -16,7 +16,9 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 BOT = HERE.parent / "blog_bot.py"
-CHROME = os.environ.get("NAVER_BOT_CHROME", "/opt/pw-browsers/chromium-1194/chrome-linux/chrome")
+DEFAULT_CHROME = ("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" if sys.platform == "darwin"
+                  else "/opt/pw-browsers/chromium-1194/chrome-linux/chrome")
+CHROME = os.environ.get("NAVER_BOT_CHROME", DEFAULT_CHROME)
 
 
 def serve():
