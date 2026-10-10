@@ -6,3 +6,5 @@ __pycache__/
 .thumbs/
 blog_snapshot/
 reads/
+.last_schedule
+.schedule_time

@@ -33,7 +33,8 @@ bash ~/blog-bot/naver-blog-bot/install_schedule.sh
 - 월·수·금 오전 10시에 블로그 클로드가 사진 폴더에서 **아직 안 쓴 사진**을 골라 글을 쓰고 **임시저장**합니다.
 - 끝나면 맥 알림이 뜹니다. 블로그 앱에서 확인하고 발행만 누르시면 됩니다.
 - 사진 폴더에 새 사진을 넣어 두시면 다음 예약 때 씁니다.
-- 지금 한 번 시험: `bash ~/blog-bot/naver-blog-bot/scheduled_draft.sh` · 끄기: `uninstall_schedule.sh`
+- 맥이 그 시각에 꺼져 있었으면 다음에 켜질 때 놓친 글을 씁니다.
+- 지금 한 번 시험: `bash ~/blog-bot/naver-blog-bot/scheduled_draft.sh --now` · 끄기: `uninstall_schedule.sh`
 
 ## 네이버 페이지·내 블로그 읽어 오기
 
