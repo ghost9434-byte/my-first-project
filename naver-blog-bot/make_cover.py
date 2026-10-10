@@ -1,16 +1,17 @@
 """(클로드용) 글 맨 위 대표 사진 만들기 — 실제 사진 위에 제목을 얹는다.
 
     .venv/bin/python make_cover.py <글폴더> <사진> --title 소도 --label "목포 맛집 · 덕자 전문점" \
-        --sub "찰진 덕자회와 칼칼한 덕자찜" --info "☎ 061-281-0086 · 목포시 부흥로 1" [--style photo|band|frame]
+        --sub "찰진 덕자회와 칼칼한 덕자찜" --info "☎ 061-281-0086 · 목포시 부흥로 1" [--style auto|photo|band|frame]
 
 → <글폴더>/images/cover.jpg (1080×1080, 네이버 목록·모바일 썸네일에 맞는 정사각형)
---style
+--style (기본 auto: 카테고리로 고름 — 맛집·생활정보=photo, 오피스 소식·창업정보=frame, 그 밖=band)
   photo : 사진 꽉 + 아래쪽 어둡게 + 흰 큰 제목 (맛집 블로그에서 가장 흔한 모양, 기본)
   band  : 사진 꽉 + 가운데 흰 띠 + 진한 제목
   frame : 사진 살짝 어둡게 + 흰 테두리 + 가운데 굵은 제목
 --focus 0.5,0.4 : 사진에서 남길 중심 (가로,세로 0~1). 음식이 아래쪽이면 세로를 키운다.
 """
 import argparse
+import json
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageOps
@@ -162,12 +163,27 @@ def style_frame(img, a):
 
 STYLES = {"photo": style_photo, "band": style_band, "frame": style_frame}
 
+# 글감(카테고리)에 따라 모양을 고른다 (회장님: "글감에 따라 알아서")
+#   맛집·생활정보 → photo (음식이 크게 보이게) / 오피스 소식·창업정보 → frame (행사·소식, 무게감)
+#   룸·회의실·오시는 길·필독 → band (정보 위주, 깔끔하게)
+def auto_style(category=""):
+    c = category or ""
+    if "맛집" in c or "생활" in c:
+        return "photo"
+    if "소식" in c or "창업" in c:
+        return "frame"
+    if c:
+        return "band"
+    return "photo"
 
-def make(photo, out, title, label="", sub="", info="", style="photo", focus=(0.5, 0.5)):
+
+def make(photo, out, title, label="", sub="", info="", style="photo", focus=(0.5, 0.5), category=""):
+    if style == "auto":
+        style = auto_style(category)
     a = argparse.Namespace(title=title, label=label, sub=sub, info=info)
     img = crop_square(Image.open(photo), focus)
     STYLES[style](img, a).convert("RGB").save(out, "JPEG", quality=90)
-    return out
+    return out, style
 
 
 def main():
@@ -178,7 +194,9 @@ def main():
     ap.add_argument("--label", default="", help="제목 위 작은 말 (예: 목포 맛집 · 덕자 전문점)")
     ap.add_argument("--sub", default="", help="제목 아래 한두 줄. 줄은 | 로 나눈다")
     ap.add_argument("--info", default="", help="전화·주소 한 줄")
-    ap.add_argument("--style", choices=STYLES, default="photo")
+    ap.add_argument("--style", choices=["auto", *STYLES], default="auto",
+                    help="auto(기본): 글 폴더 post.json 의 카테고리로 고름")
+    ap.add_argument("--category", default="", help="auto 일 때 쓸 카테고리 (없으면 post.json 에서 읽음)")
     ap.add_argument("--focus", default="0.5,0.5")
     ap.add_argument("--out", default="cover.jpg")
     a = ap.parse_args()
@@ -187,8 +205,12 @@ def main():
         folder = BASE / "posts" / a.folder
     (folder / "images").mkdir(parents=True, exist_ok=True)
     out = folder / "images" / a.out
-    make(a.photo, out, a.title, a.label, a.sub, a.info, a.style, tuple(float(v) for v in a.focus.split(",")))
-    print(f"✅ 대표 사진: {out}")
+    category = a.category
+    if not category and (folder / "post.json").exists():
+        category = json.loads((folder / "post.json").read_text(encoding="utf-8")).get("category", "")
+    _, style = make(a.photo, out, a.title, a.label, a.sub, a.info, a.style,
+                    tuple(float(v) for v in a.focus.split(",")), category)
+    print(f"✅ 대표 사진: {out} (모양: {style}, 카테고리: {category or '-'})")
 
 
 if __name__ == "__main__":
