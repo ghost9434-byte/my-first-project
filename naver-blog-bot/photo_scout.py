@@ -6,7 +6,7 @@
 하는 일
   1. 사진(JPG·HEIC·PNG)의 촬영 시각과 GPS 위치를 읽는다. (구글 포토에서 받은 zip 도 그대로 넣으면 된다)
   2. 같은 날, 가까운 곳(1km 안, 3시간 안)에서 찍은 사진을 '방문 1건'으로 묶는다.
-  3. 댁·오피스 근처 사진은 뺀다 (scout_exclude.json — 아래 참고). 집 위치가 글에 드러나지 않게.
+  3. scout_exclude.json 에 적어 둔 곳 근처 사진은 뺀다 (없으면 모두 쓴다 — 회장님은 댁·오피스 사진도 괜찮다고 하심).
   4. 방문마다 지역 이름(오픈스트리트맵)과, 카카오 키가 있으면 근처 식당·카페 후보 이름을 붙인다.
 → scout/visits.md (목록), scout/visit-XX.jpg (사진 모음), scout/visits.json
 
@@ -227,8 +227,6 @@ def main():
     files = gather(a.sources, work)
     print(f"사진 {len(files)}장을 읽습니다...", flush=True)
     exclude = load_exclude()
-    if not exclude:
-        print("⚠️ scout_exclude.json 이 없습니다. 댁·오피스 근처 사진도 목록에 들어갑니다.")
     items, no_gps, excluded = [], 0, 0
     for f in files:
         when, lat, lon = read_photo(f)
@@ -256,7 +254,7 @@ def main():
     (OUT / "visits.json").write_text(json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8")
     md = [f"# 방문 목록 ({datetime.now():%Y-%m-%d %H:%M} 만듦)\n",
           f"사진 {len(files)}장 중 위치 있는 {len(items)}장 → 방문 {len(result)}건"
-          f" (위치·시각 없음 {no_gps}장, 댁·오피스 근처라 뺀 사진 {excluded}장)\n",
+          f" (위치·시각 없음 {no_gps}장, 제외 지역이라 뺀 사진 {excluded}장)\n",
           "식당 이름은 후보입니다. 글에 쓰기 전에 회장님께 확인받으세요.\n"]
     for r in result:
         md.append(f"## {r['no']}. {r['start']}~{r['end']} · {r['area'] or '(지역 미확인)'}")
