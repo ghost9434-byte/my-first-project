@@ -178,10 +178,7 @@ class Places:
         """근처 식당(FD6)·카페(CE7) 후보 — 카카오 키가 있을 때만."""
         if not self.kakao or self.offline:
             return []
-        k = f"kakao:{lat:.5f},{lon:.5f},{radius}"
-        if k in self.cache:
-            return self.cache[k]
-        out = []
+        out = []  # 카카오 약관상 결과를 저장하지 않고 그때그때 묻는다
         for cat in ("FD6", "CE7", "AT4"):
             try:
                 q = urllib.parse.urlencode({"category_group_code": cat, "x": lon, "y": lat, "radius": radius, "sort": "distance"})
@@ -194,7 +191,6 @@ class Places:
             except Exception:
                 pass
         out.sort(key=lambda d: d["dist_m"])
-        self.cache[k] = out[:5]
         return out[:5]
 
 
