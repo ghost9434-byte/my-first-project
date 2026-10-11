@@ -7,18 +7,36 @@
   그대로 이어받는다. → 모든 글자에 색·크기·글꼴을 빠짐없이 적는다.
 """
 
-BLUE = "#2f5dd4"
+BLUE = "#2f5dd4"   # 강조 색 (테마에 따라 바뀜)
 TEXT = "#333333"
 GRAY = "#8a8a8a"
 FONT = "'나눔고딕', NanumGothic, sans-serif"
+HEAD = BLUE        # 소제목 색
+NUM = GRAY         # 소제목 위 01, 02 번호 색
+
+# 글 종류별 색·글꼴. 개인 글은 회장님이 좋아하시는 한미약품 홈페이지 색감
+# (검정 글자 + 빨강 #E1251B 포인트 + 회색 보조). 홈페이지 글꼴 Pretendard 는 네이버에 없어
+# 가장 비슷한 나눔바른고딕을 쓴다.
+THEMES = {
+    "office": dict(BLUE="#2f5dd4", TEXT="#333333", GRAY="#8a8a8a", HEAD="#2f5dd4", NUM="#8a8a8a",
+                   FONT="'나눔고딕', NanumGothic, sans-serif"),
+    "personal": dict(BLUE="#E1251B", TEXT="#111111", GRAY="#696969", HEAD="#000000", NUM="#E1251B",
+                     FONT="'나눔바른고딕', NanumBarunGothic, sans-serif"),
+}
 
 
-def span(text, size=16, color=TEXT, bold=False):
+def use_theme(name):
+    """글 쓰기 전에 한 번 부른다: use_theme("personal") → 이후 p(), head() 등이 그 색·글꼴을 쓴다."""
+    globals().update(THEMES[name])
+
+
+def span(text, size=16, color=None, bold=False):
+    color = color or TEXT  # 테마를 바꿔도 따라가도록 부를 때 정한다
     inner = f"<b>{text}</b>" if bold else text
     return f'<span style="font-family:{FONT};font-size:{size}px;color:{color};">{inner}</span>'
 
 
-def p(*lines, size=16, color=TEXT, bold=False):
+def p(*lines, size=16, color=None, bold=False):
     """가운데 정렬 문단. 줄마다 서식을 따로 붙여 앞 문단 서식이 새지 않게 한다."""
     body = "<br>".join(span(line, size, color, bold) for line in lines)
     return f'<p style="text-align:center;">{body}</p>'
@@ -34,7 +52,7 @@ def gap():
 
 
 def head(n, title, sub=None):
-    out = gap() + "<hr>" + p(f"{n:02d}", size=13, color=GRAY) + p(title, size=24, color=BLUE, bold=True)
+    out = gap() + "<hr>" + p(f"{n:02d}", size=13, color=NUM, bold=NUM != GRAY) + p(title, size=24, color=HEAD, bold=True)
     if sub:
         out += p(sub, size=15, color=GRAY)
     return out + gap()

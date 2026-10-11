@@ -8,7 +8,9 @@
   photo : 사진 꽉 + 아래쪽 어둡게 + 흰 큰 제목 (맛집 블로그에서 가장 흔한 모양, 기본)
   band  : 사진 꽉 + 가운데 흰 띠 + 진한 제목
   frame : 사진 살짝 어둡게 + 흰 테두리 + 가운데 굵은 제목
-  diary : 크림색 종이 위에 폴라로이드 사진 + 손글씨 제목 (회장님 개인 글: 여행·식물·일상)
+  clean : 위에 큰 사진 + 아래 흰 바탕에 빨간 포인트·검정 굵은 제목 (회장님 개인 글 기본, 한미약품 홈페이지 색감)
+  diary : 크림색 종이 위에 폴라로이드 사진 + 손글씨 제목 (개인 글의 다른 모양)
+--en "MY ROOM · PLANT" : clean 모양 제목 위 영문 한 줄 (없으면 SH SUCCESS HUB)
 --focus 0.5,0.4 : 사진에서 남길 중심 (가로,세로 0~1). 음식이 아래쪽이면 세로를 키운다.
 """
 import argparse
@@ -37,6 +39,13 @@ TITLE = lambda s: font("BlackHanSans-Regular.ttf", s)
 BOLD = lambda s: font("NanumGothic-ExtraBold.ttf", s)
 TEXT = lambda s: font("NanumGothic-Bold.ttf", s)
 HAND = lambda s: font("NanumPenScript-Regular.ttf", s)
+PRET = lambda s, w="Bold": font(f"Pretendard-{w}.otf", s)
+POP = lambda s, w="SemiBold": font(f"Poppins-{w}.ttf", s)
+# 회장님이 좋아하시는 한미약품 홈페이지 색감 (맥북 클로드가 홈페이지에서 읽은 값)
+RED = (225, 37, 27)        # #E1251B
+INK_BLACK = (0, 0, 0)
+GRAY_D, GRAY_M, GRAY_L = (82, 82, 82), (105, 105, 105), (139, 139, 139)
+BG_LIGHT = (249, 249, 249)  # #F9F9F9
 PAPER = (244, 239, 228)
 INK = (52, 46, 40)
 
@@ -48,6 +57,22 @@ def crop_square(img, focus=(0.5, 0.5), size=SIZE):
     left = min(max(int(w * focus[0] - side / 2), 0), w - side)
     top = min(max(int(h * focus[1] - side / 2), 0), h - side)
     return img.crop((left, top, left + side, top + side)).resize((size, size), Image.LANCZOS)
+
+
+def crop_rect(img, w, h, focus=(0.5, 0.5)):
+    """원본에서 w:h 비율로 잘라 w×h 로 만든다 (focus 가 남길 중심)."""
+    img = ImageOps.exif_transpose(img).convert("RGB")
+    W, H = img.size
+    if W / H > w / h:
+        cw, ch = int(H * w / h), H
+    else:
+        cw, ch = W, int(W * h / w)
+    left = min(max(int(W * focus[0] - cw / 2), 0), W - cw)
+    top = min(max(int(H * focus[1] - ch / 2), 0), H - ch)
+    return img.crop((left, top, left + cw, top + ch)).resize((w, h), Image.LANCZOS)
+
+
+CLEAN_PH = 740  # clean 모양에서 사진이 차지하는 높이
 
 
 def fit(text, maker, start, max_w):
@@ -165,6 +190,31 @@ def style_frame(img, a):
     return base
 
 
+def style_clean(img, a):
+    """개인 글 기본: 깔끔한 기업 홈페이지 느낌. 사진은 크게, 글은 흰 바탕에 정갈하게."""
+    base = Image.new("RGBA", (SIZE, SIZE), BG_LIGHT + (255,))
+    ph = CLEAN_PH
+    base.paste(img, (0, 0))
+    d = ImageDraw.Draw(base)
+    x = 76
+    d.rectangle((x, ph + 44, x + 56, ph + 50), fill=RED)
+    en = (getattr(a, "en", "") or "SH SUCCESS HUB").upper()
+    d.text((x + 76, ph + 47), "  ".join(en.split(" ")) if len(en) < 18 else en, font=POP(24), fill=RED, anchor="lm")
+    tf = PRET(70)
+    while tf.getlength(a.title) > SIZE - 2 * x and tf.size > 44:
+        tf = PRET(tf.size - 4)
+    d.text((x, ph + 76), a.title, font=tf, fill=INK_BLACK, anchor="la")
+    y = ph + 76 + tf.size + 18
+    if a.sub:
+        d.text((x, y), a.sub.replace("|", " · "), font=PRET(32, "Medium"), fill=GRAY_M, anchor="la")
+    foot = SIZE - 40
+    if a.label:
+        d.text((x, foot), a.label, font=PRET(22, "SemiBold"), fill=GRAY_L, anchor="ld")
+    if a.info:
+        d.text((SIZE - x, foot), a.info, font=POP(22, "Medium"), fill=GRAY_L, anchor="rd")
+    return base
+
+
 def style_diary(img, a):
     """개인 글용: 오피스 글과 확 다르게 — 종이 위에 붙인 폴라로이드와 손글씨."""
     import random
@@ -207,7 +257,7 @@ def style_diary(img, a):
     return base
 
 
-STYLES = {"photo": style_photo, "band": style_band, "frame": style_frame, "diary": style_diary}
+STYLES = {"photo": style_photo, "band": style_band, "frame": style_frame, "clean": style_clean, "diary": style_diary}
 
 # 글감(카테고리)에 따라 모양을 고른다 (회장님: "글감에 따라 알아서")
 #   맛집·생활정보 → photo (음식이 크게 보이게) / 오피스 소식·창업정보 → frame (행사·소식, 무게감)
@@ -215,7 +265,7 @@ STYLES = {"photo": style_photo, "band": style_band, "frame": style_frame, "diary
 def auto_style(category=""):
     c = category or ""
     if any(k in c for k in ("일상", "여행", "식물", "대표", "오피스 밖")):  # 회장님 개인 글
-        return "diary"
+        return "clean"
     if "맛집" in c or "생활" in c:
         return "photo"
     if "소식" in c or "창업" in c:
@@ -225,11 +275,14 @@ def auto_style(category=""):
     return "photo"
 
 
-def make(photo, out, title, label="", sub="", info="", style="photo", focus=(0.5, 0.5), category=""):
+def make(photo, out, title, label="", sub="", info="", style="photo", focus=(0.5, 0.5), category="", en=""):
     if style == "auto":
         style = auto_style(category)
-    a = argparse.Namespace(title=title, label=label, sub=sub, info=info)
-    img = crop_square(Image.open(photo), focus)
+    a = argparse.Namespace(title=title, label=label, sub=sub, info=info, en=en, focus=focus)
+    if style == "clean":
+        img = crop_rect(Image.open(photo), SIZE, CLEAN_PH, focus)
+    else:
+        img = crop_square(Image.open(photo), focus)
     STYLES[style](img, a).convert("RGB").save(out, "JPEG", quality=90)
     return out, style
 
@@ -245,6 +298,7 @@ def main():
     ap.add_argument("--style", choices=["auto", *STYLES], default="auto",
                     help="auto(기본): 글 폴더 post.json 의 카테고리로 고름")
     ap.add_argument("--category", default="", help="auto 일 때 쓸 카테고리 (없으면 post.json 에서 읽음)")
+    ap.add_argument("--en", default="", help="clean 모양: 제목 위 영문 한 줄 (예: MY ROOM · PLANT)")
     ap.add_argument("--focus", default="0.5,0.5")
     ap.add_argument("--out", default="cover.jpg")
     a = ap.parse_args()
@@ -257,7 +311,7 @@ def main():
     if not category and (folder / "post.json").exists():
         category = json.loads((folder / "post.json").read_text(encoding="utf-8")).get("category", "")
     _, style = make(a.photo, out, a.title, a.label, a.sub, a.info, a.style,
-                    tuple(float(v) for v in a.focus.split(",")), category)
+                    tuple(float(v) for v in a.focus.split(",")), category, a.en)
     print(f"✅ 대표 사진: {out} (모양: {style}, 카테고리: {category or '-'})")
 
 
