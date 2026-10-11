@@ -8,8 +8,8 @@
   photo : 사진 꽉 + 아래쪽 어둡게 + 흰 큰 제목 (맛집 블로그에서 가장 흔한 모양, 기본)
   band  : 사진 꽉 + 가운데 흰 띠 + 진한 제목
   frame : 사진 살짝 어둡게 + 흰 테두리 + 가운데 굵은 제목
-  clean : 위에 큰 사진 + 아래 흰 바탕에 빨간 포인트·검정 굵은 제목 (회장님 개인 글 기본, 한미약품 홈페이지 색감)
-  diary : 크림색 종이 위에 폴라로이드 사진 + 손글씨 제목 (개인 글의 다른 모양)
+  diary : 크림색 종이 위에 폴라로이드 사진 + 손글씨 제목 (회장님 개인 글 기본)
+  clean : 위에 큰 사진 + 아래 흰 바탕에 빨간 포인트·검정 굵은 제목 (한미약품 홈페이지 색감, 개인 글의 다른 모양)
 --en "MY ROOM · PLANT" : clean 모양 제목 위 영문 한 줄 (없으면 SH SUCCESS HUB)
 --focus 0.5,0.4 : 사진에서 남길 중심 (가로,세로 0~1). 음식이 아래쪽이면 세로를 키운다.
 """
@@ -265,7 +265,7 @@ STYLES = {"photo": style_photo, "band": style_band, "frame": style_frame, "clean
 def auto_style(category=""):
     c = category or ""
     if any(k in c for k in ("일상", "여행", "식물", "대표", "오피스 밖")):  # 회장님 개인 글
-        return "clean"
+        return "diary"  # 회장님이 폴라로이드 모양을 고르심
     if "맛집" in c or "생활" in c:
         return "photo"
     if "소식" in c or "창업" in c:
