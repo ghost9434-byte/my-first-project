@@ -14,14 +14,17 @@ FONT = "'나눔고딕', NanumGothic, sans-serif"
 HEAD = BLUE        # 소제목 색
 NUM = GRAY         # 소제목 위 01, 02 번호 색
 
-# 글 종류별 색·글꼴. 개인 글은 회장님이 좋아하시는 한미약품 홈페이지 색감
-# (검정 글자 + 빨강 #E1251B 포인트 + 회색 보조). 홈페이지 글꼴 Pretendard 는 네이버에 없어
-# 가장 비슷한 나눔바른고딕을 쓴다.
+# 글 종류별 색·글꼴.
+#   personal       : 회장님 개인 글 기본. 폴라로이드 대표 사진과 맞춘 종이·잉크 느낌
+#                    (짙은 밤색 글자 + 따뜻한 갈색 강조, 부드러운 명조 마루부리)
+#   personal_clean : 한미약품 홈페이지 색감 (검정 + 빨강 #E1251B, 나눔바른고딕)
 THEMES = {
     "office": dict(BLUE="#2f5dd4", TEXT="#333333", GRAY="#8a8a8a", HEAD="#2f5dd4", NUM="#8a8a8a",
                    FONT="'나눔고딕', NanumGothic, sans-serif"),
-    "personal": dict(BLUE="#E1251B", TEXT="#111111", GRAY="#696969", HEAD="#000000", NUM="#E1251B",
-                     FONT="'나눔바른고딕', NanumBarunGothic, sans-serif"),
+    "personal": dict(BLUE="#96784F", TEXT="#342E28", GRAY="#8A8178", HEAD="#342E28", NUM="#96784F",
+                     FONT="'마루부리', MaruBuri, serif"),
+    "personal_clean": dict(BLUE="#E1251B", TEXT="#111111", GRAY="#696969", HEAD="#000000", NUM="#E1251B",
+                           FONT="'나눔바른고딕', NanumBarunGothic, sans-serif"),
 }
 
 
@@ -95,3 +98,13 @@ try:
     from blog_style_local import *  # noqa: E402,F401,F403
 except ImportError:
     pass
+
+
+def note(*lines):
+    """(개인 글) 사진 아래 한 줄 메모. 작은 글씨, 갈색, 연필 표시."""
+    return p(*["✎ " + lines[0], *lines[1:]], size=14, color=BLUE)
+
+
+def diary_date(text):
+    """(개인 글) 글 맨 위 날짜·날씨 한 줄. 예: diary_date("2026. 10. 11. 일요일 · 맑음")"""
+    return p(text, size=13, color=GRAY) + gap()
