@@ -4,10 +4,11 @@
         --sub "찰진 덕자회와 칼칼한 덕자찜" --info "☎ 061-281-0086 · 목포시 부흥로 1" [--style auto|photo|band|frame]
 
 → <글폴더>/images/cover.jpg (1080×1080, 네이버 목록·모바일 썸네일에 맞는 정사각형)
---style (기본 auto: 카테고리로 고름 — 맛집·생활정보=photo, 오피스 소식·창업정보=frame, 그 밖=band)
+--style (기본 auto: 카테고리로 고름 — 개인 글(일상·여행·식물)=diary, 맛집·생활정보=photo, 오피스 소식·창업정보=frame, 그 밖=band)
   photo : 사진 꽉 + 아래쪽 어둡게 + 흰 큰 제목 (맛집 블로그에서 가장 흔한 모양, 기본)
   band  : 사진 꽉 + 가운데 흰 띠 + 진한 제목
   frame : 사진 살짝 어둡게 + 흰 테두리 + 가운데 굵은 제목
+  diary : 크림색 종이 위에 폴라로이드 사진 + 손글씨 제목 (회장님 개인 글: 여행·식물·일상)
 --focus 0.5,0.4 : 사진에서 남길 중심 (가로,세로 0~1). 음식이 아래쪽이면 세로를 키운다.
 """
 import argparse
@@ -35,6 +36,9 @@ def font(name, size):
 TITLE = lambda s: font("BlackHanSans-Regular.ttf", s)
 BOLD = lambda s: font("NanumGothic-ExtraBold.ttf", s)
 TEXT = lambda s: font("NanumGothic-Bold.ttf", s)
+HAND = lambda s: font("NanumPenScript-Regular.ttf", s)
+PAPER = (244, 239, 228)
+INK = (52, 46, 40)
 
 
 def crop_square(img, focus=(0.5, 0.5), size=SIZE):
@@ -161,13 +165,57 @@ def style_frame(img, a):
     return base
 
 
-STYLES = {"photo": style_photo, "band": style_band, "frame": style_frame}
+def style_diary(img, a):
+    """개인 글용: 오피스 글과 확 다르게 — 종이 위에 붙인 폴라로이드와 손글씨."""
+    import random
+    rnd = random.Random(a.title)
+    # 종이 (아주 옅은 결)
+    base = Image.new("RGBA", (SIZE, SIZE), PAPER + (255,))
+    grain = Image.effect_noise((SIZE, SIZE), 18).convert("L").point(lambda v: 128 + (v - 128) // 3)
+    base = Image.blend(base, Image.merge("RGBA", (grain, grain, grain, Image.new("L", (SIZE, SIZE), 255))), 0.06)
+    # 폴라로이드
+    ph = 640
+    pad, bottom = 30, 150
+    card = Image.new("RGBA", (ph + pad * 2, ph + pad + bottom), (253, 252, 248, 255))
+    card.paste(img.resize((ph, ph), Image.LANCZOS), (pad, pad))
+    d = ImageDraw.Draw(card)
+    hf = HAND(110)
+    while hf.getlength(a.title) > ph and hf.size > 50:
+        hf = HAND(hf.size - 6)
+    d.text((card.width / 2, ph + pad + bottom / 2 + 4), a.title, font=hf, fill=INK, anchor="mm")
+    angle = rnd.choice([-3.2, -2.4, 2.4, 3.2])
+    rot = card.rotate(angle, resample=Image.BICUBIC, expand=True)
+    shadow = Image.new("RGBA", rot.size, (0, 0, 0, 0))
+    shadow.putalpha(rot.getchannel("A").point(lambda v: 70 if v else 0))
+    shadow = shadow.filter(ImageFilter.GaussianBlur(14))
+    x, y = (SIZE - rot.width) // 2, 34
+    base.alpha_composite(shadow, (x + 8, y + 14))
+    base.alpha_composite(rot, (x, y))
+    # 마스킹 테이프
+    tape = Image.new("RGBA", (210, 54), (226, 208, 170, 175))
+    tape = tape.rotate(-angle * 2.5 + rnd.choice([-6, 6]), resample=Image.BICUBIC, expand=True)
+    base.alpha_composite(tape, (SIZE // 2 - tape.width // 2, y - 6))
+    # 아래 작은 글: 분류 · 한 줄 · 날짜
+    dd = ImageDraw.Draw(base)
+    y0 = y + rot.height + 6
+    if a.label:
+        dd.text((SIZE / 2, y0), a.label, font=BOLD(26), fill=(150, 120, 80), anchor="mt")
+        y0 += 42
+    if a.sub:
+        dd.text((SIZE / 2, y0), a.sub.replace("|", " · "), font=HAND(46), fill=INK, anchor="mt")
+    dd.text((SIZE - 44, SIZE - 30), a.info or "SH SUCCESS HUB", font=HAND(34), fill=(120, 110, 98), anchor="rd")
+    return base
+
+
+STYLES = {"photo": style_photo, "band": style_band, "frame": style_frame, "diary": style_diary}
 
 # 글감(카테고리)에 따라 모양을 고른다 (회장님: "글감에 따라 알아서")
 #   맛집·생활정보 → photo (음식이 크게 보이게) / 오피스 소식·창업정보 → frame (행사·소식, 무게감)
 #   룸·회의실·오시는 길·필독 → band (정보 위주, 깔끔하게)
 def auto_style(category=""):
     c = category or ""
+    if any(k in c for k in ("일상", "여행", "식물", "대표", "오피스 밖")):  # 회장님 개인 글
+        return "diary"
     if "맛집" in c or "생활" in c:
         return "photo"
     if "소식" in c or "창업" in c:
