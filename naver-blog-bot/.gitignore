@@ -9,3 +9,7 @@ reads/
 .last_schedule
 .schedule_time
 blog_style_local.py
+scout/
+scout_exclude.json
+.scout_cache.json
+.kakao_key
