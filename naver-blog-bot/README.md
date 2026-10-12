@@ -24,7 +24,7 @@ bash ~/blog-bot/naver-blog-bot/install_auto.sh
 - 끄기: `bash ~/blog-bot/naver-blog-bot/uninstall_auto.sh`
 - 기록: `logs/auto-날짜.log`
 
-## 예약 글쓰기 (월·수·금, 임시저장까지)
+## 예약 글쓰기 (월·수·금, 임시저장까지) — 보류: 맥미니 연결 후 시작
 
 ```
 bash ~/blog-bot/naver-blog-bot/install_schedule.sh

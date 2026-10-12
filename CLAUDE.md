@@ -91,7 +91,9 @@
 ## 사진 폴더
 - 오피스 사진: `/Users/kimseunghoon/Desktop/SH SUCCESSHUB/오피스 사진들`
 
-## 예약 글쓰기 (월·수·금 새벽 3시, 임시저장까지)
+## 예약 글쓰기 (월·수·금 새벽 3시, 임시저장까지) — ⏸ 보류 중
+- **회장님 지시(2026-10-12): 맥미니를 연결하면 그때 시작한다. 그전까지 맥북에서는 꺼 둔다.**
+  맥미니에서 켤 때: 설치(setup.sh) → login.sh → `bash naver-blog-bot/install_schedule.sh 3 0`. 맥미니는 늘 켜져 있으니 예약 깨우기(pmset)는 필요 없다.
 - 맥이 `naver-blog-bot/scheduled_draft.sh` 를 실행해 이 폴더의 클로드를 깨운다. 지시는 `naver-blog-bot/schedule_prompt.md`.
 - 이미 쓴 사진 원본 경로는 `naver-blog-bot/.used_photos` 에 쌓인다. 회장님이 새 사진을 폴더에 넣으면 다음 예약 때 쓰인다.
 - 결과는 맥 알림과 `naver-blog-bot/logs/schedule-날짜.log` 에 남는다. 회장님은 블로그 앱에서 확인하고 발행만 누른다.
