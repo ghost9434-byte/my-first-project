@@ -10,7 +10,8 @@ if [ "$1" != "--now" ]; then
   DUE=$(.venv/bin/python - "$(cat .schedule_time 2>/dev/null || echo 03:00)" "$(cat .last_schedule 2>/dev/null)" <<'PY'
 import sys, datetime as dt
 hh, mm = map(int, sys.argv[1].split(":"))
-now = dt.datetime.now()
+# 맥이 2시 55분에 깨면서 몇 분 일찍 불려도 이번 예약으로 친다
+now = dt.datetime.now() + dt.timedelta(minutes=10)
 slot = None
 for back in range(0, 8):
     d = (now - dt.timedelta(days=back)).replace(hour=hh, minute=mm, second=0, microsecond=0)
@@ -23,6 +24,12 @@ print("no" if (slot is None or done) else "yes")
 PY
 )
   [ "$DUE" = "yes" ] || exit 0
+fi
+
+# 글 쓰는 동안 맥이 다시 잠들지 않게 붙잡는다 (예약 깨우기는 몇 분 뒤 다시 재운다)
+if [ -z "$BLOG_CAFFEINATED" ] && command -v caffeinate >/dev/null 2>&1; then
+  export BLOG_CAFFEINATED=1
+  exec caffeinate -i -s -m /bin/bash "$PWD/$(basename "$0")" --now
 fi
 
 LOCK="/tmp/naver-blog-bot.lock"
@@ -54,7 +61,8 @@ OUT=$(cd .. && claude --no-chrome -p "$(cat naver-blog-bot/schedule_prompt.md)" 
         --allowedTools "Read" "Write" "Edit" "Glob" "Grep" "Bash" 2>&1)
 echo "$OUT" >> "$LOG"
 
-date '+%Y-%m-%dT%H:%M:%S' > .last_schedule   # 이번 예약은 처리함 (실패해도 같은 시각엔 다시 안 함)
+# 이번 예약은 처리함 (실패해도 같은 시각엔 다시 안 함). 3시 전에 끝나도 다시 쓰지 않게 10분 뒤 시각으로 적는다
+.venv/bin/python -c "import datetime as d; print((d.datetime.now()+d.timedelta(minutes=10)).isoformat(timespec='seconds'))" > .last_schedule
 RESULT=$(echo "$OUT" | grep -E "^RESULT_(OK|FAIL):" | tail -1)
 case "$RESULT" in
   RESULT_OK:*)   notify "임시저장 완료" "${RESULT#RESULT_OK: } — 블로그 앱에서 확인 후 발행해 주세요." ;;
