@@ -1,0 +1,737 @@
+<title>점심 대포</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Sans+KR:wght@400;600;700&display=swap">
+<style>
+/* Layout: one artillery range scene up top, names + fire button directly under it, today's log at the bottom */
+:root {
+  --bg: #eef1f5;
+  --fg: #1a212c;
+  --muted: #5b6677;
+  --panel: #ffffff;
+  --line: #d4dbe4;
+  --accent: #e2540f;
+  --accent-fg: #ffffff;
+  --brass: #c9982b;
+  --iron: #2a313d;
+  --wood: #8a5a34;
+  --wood-dark: #5e3b20;
+  --sky-top: #8cc7ee;
+  --sky-bot: #e4f3fc;
+  --cloud: rgba(255,255,255,.85);
+  --hill: #a9c98d;
+  --ground: #6a8d4b;
+  --ground-dark: #4f7036;
+  --tick: rgba(255,255,255,.55);
+  --font-display: "Black Han Sans", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f141b; --fg: #e6ebf2; --muted: #94a0b2; --panel: #171e28; --line: #283241;
+    --accent: #ff7130; --accent-fg: #1a0d05; --brass: #d9aa45; --iron: #5f6a7c;
+    --wood: #8f603b; --wood-dark: #4f321c;
+    --sky-top: #0b1730; --sky-bot: #2b3d62; --cloud: rgba(200,212,235,.18);
+    --hill: #243a2c; --ground: #2c4527; --ground-dark: #1f331c; --tick: rgba(255,255,255,.35);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f141b; --fg: #e6ebf2; --muted: #94a0b2; --panel: #171e28; --line: #283241;
+  --accent: #ff7130; --accent-fg: #1a0d05; --brass: #d9aa45; --iron: #5f6a7c;
+  --wood: #8f603b; --wood-dark: #4f321c;
+  --sky-top: #0b1730; --sky-bot: #2b3d62; --cloud: rgba(200,212,235,.18);
+  --hill: #243a2c; --ground: #2c4527; --ground-dark: #1f331c; --tick: rgba(255,255,255,.35);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55;
+}
+.wrap {
+  max-width: 920px;
+  margin: 0 auto;
+  padding-block: 28px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid;
+  gap: 18px;
+}
+header { display: grid; gap: 4px; }
+.eyebrow {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  color: var(--accent);
+}
+h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(38px, 7vw, 60px);
+  line-height: 1;
+  letter-spacing: -.01em;
+  text-wrap: balance;
+}
+.lede { margin: 4px 0 0; color: var(--muted); max-width: 60ch; }
+
+.stage { position: relative; }
+#scene {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 14px;
+  background: var(--sky-bot);
+}
+@media (max-width: 560px) { #scene { aspect-ratio: 4 / 3.4; } }
+
+.banner {
+  position: absolute;
+  left: 50%;
+  top: 7%;
+  transform: translateX(-50%);
+  background: var(--panel);
+  color: var(--fg);
+  border: 2px solid var(--fg);
+  border-radius: 12px;
+  padding: 10px 22px 12px;
+  text-align: center;
+  box-shadow: 0 6px 0 var(--fg);
+  max-width: calc(100% - 24px);
+  animation: pop .45s cubic-bezier(.2,1.6,.4,1) both;
+}
+.banner small { display: block; font-size: 13px; color: var(--muted); font-weight: 600; }
+.banner strong {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(26px, 5.5vw, 42px);
+  line-height: 1.1;
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+.banner span { font-weight: 700; }
+@keyframes pop { from { transform: translateX(-50%) scale(.4); opacity: 0; } to { transform: translateX(-50%) scale(1); opacity: 1; } }
+
+.controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: end;
+}
+@media (max-width: 640px) { .controls { grid-template-columns: minmax(0, 1fr); } }
+.names {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.names label { display: grid; gap: 4px; min-width: 0; }
+.names .tag {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .04em;
+}
+.names .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.names input {
+  width: 100%;
+  min-width: 0;
+  font: 600 16px/1.2 var(--font-body);
+  color: var(--fg);
+  background: var(--panel);
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.names input:focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; border-color: transparent; }
+.names input:disabled { opacity: .6; }
+
+.actions { display: flex; gap: 8px; align-items: stretch; }
+button { font-family: var(--font-body); cursor: pointer; }
+button:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.fire {
+  font-family: var(--font-display);
+  font-size: 26px;
+  line-height: 1;
+  padding: 14px 30px 16px;
+  border-radius: 12px;
+  border: 2px solid var(--fg);
+  background: var(--accent);
+  color: var(--accent-fg);
+  box-shadow: 0 5px 0 var(--fg);
+  transition: transform .08s, box-shadow .08s;
+  white-space: nowrap;
+  flex: 1;
+}
+.fire:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 1px 0 var(--fg); }
+.fire:disabled { cursor: progress; filter: saturate(.5); }
+.ghost {
+  background: transparent;
+  color: var(--muted);
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.ghost:hover { color: var(--fg); border-color: var(--muted); }
+
+.record {
+  border-top: 1.5px solid var(--line);
+  padding-top: 16px;
+  display: grid;
+  gap: 12px;
+}
+.record-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.record h2 { margin: 0; font-size: 15px; font-weight: 700; }
+.tally { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.tally li {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--panel); border: 1.5px solid var(--line); border-radius: 999px;
+  padding: 5px 12px 5px 8px; font-weight: 600; font-size: 14px;
+}
+.tally b { font-variant-numeric: tabular-nums; color: var(--accent); }
+.log { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; color: var(--muted); font-size: 13px; }
+.log li { display: flex; gap: 10px; font-variant-numeric: tabular-nums; }
+.log time { min-width: 3.5em; }
+.empty { color: var(--muted); font-size: 13px; margin: 0; }
+</style>
+
+<main class="wrap">
+  <header>
+    <p class="eyebrow">3인 점심내기</p>
+    <h1>점심 대포</h1>
+    <p class="lede">세 사람 이름을 적고 발사를 누르세요. 대포가 무작위로 한 명을 조준합니다. 포탄에 맞은 사람이 오늘 점심을 삽니다.</p>
+  </header>
+
+  <section class="stage">
+    <canvas id="scene" role="img" aria-label="대포 한 문과 친구 세 명이 서 있는 사격장"></canvas>
+    <div class="banner" id="banner" hidden aria-live="polite">
+      <small>오늘 점심은</small>
+      <strong id="winner">-</strong>
+      <span>님이 쏩니다!</span>
+    </div>
+  </section>
+
+  <section class="controls">
+    <div class="names">
+      <label for="name0"><span class="tag"><i class="dot" style="background:#3b7dd8"></i>1번 자리</span><input id="name0" maxlength="8" autocomplete="off"></label>
+      <label for="name1"><span class="tag"><i class="dot" style="background:#2f9e6b"></i>2번 자리</span><input id="name1" maxlength="8" autocomplete="off"></label>
+      <label for="name2"><span class="tag"><i class="dot" style="background:#c2417a"></i>3번 자리</span><input id="name2" maxlength="8" autocomplete="off"></label>
+    </div>
+    <div class="actions">
+      <button id="fire" class="fire" type="button">발사!</button>
+      <button id="sound" class="ghost" type="button" aria-pressed="true">소리 켬</button>
+    </div>
+  </section>
+
+  <section class="record">
+    <div class="record-head">
+      <h2>누가 몇 번 샀나</h2>
+      <button id="reset" class="ghost" type="button">기록 지우기</button>
+    </div>
+    <ul class="tally" id="tally"></ul>
+    <ol class="log" id="log"></ol>
+  </section>
+</main>
+
+<script>
+(() => {
+  const $ = s => document.querySelector(s);
+  const canvas = $('#scene');
+  const ctx = canvas.getContext('2d');
+  const fireBtn = $('#fire'), soundBtn = $('#sound'), banner = $('#banner'), winnerEl = $('#winner');
+  const inputs = [0, 1, 2].map(i => $('#name' + i));
+  const SHIRT = ['#3b7dd8', '#2f9e6b', '#c2417a'];
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const css = getComputedStyle(document.documentElement);
+  const tok = n => css.getPropertyValue(n).trim();
+
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  };
+
+  /* ---------- names & record ---------- */
+  let names = store.get('lc-names', ['민준', '서연', '지호']);
+  if (!Array.isArray(names) || names.length !== 3) names = ['민준', '서연', '지호'];
+  let log = store.get('lc-log', []);
+  if (!Array.isArray(log)) log = [];
+
+  inputs.forEach((el, i) => {
+    el.value = names[i];
+    el.addEventListener('input', () => {
+      names[i] = el.value.trim();
+      store.set('lc-names', names);
+    });
+  });
+  const nameOf = i => names[i] || `${i + 1}번`;
+
+  function renderRecord() {
+    const tally = $('#tally'), list = $('#log');
+    tally.innerHTML = ''; list.innerHTML = '';
+    if (!log.length) {
+      const p = document.createElement('li');
+      p.className = 'empty'; p.style.border = '0'; p.style.background = 'none'; p.style.padding = '0';
+      p.textContent = '아직 발사 기록이 없습니다. 첫 발을 쏴 보세요.';
+      tally.appendChild(p);
+      return;
+    }
+    const counts = {};
+    log.forEach(r => { counts[r.name] = counts[r.name] || { n: 0, c: r.color }; counts[r.name].n++; });
+    Object.entries(counts).sort((a, b) => b[1].n - a[1].n).forEach(([name, v]) => {
+      const li = document.createElement('li');
+      li.innerHTML = `<i class="dot" style="width:10px;height:10px;border-radius:50%;background:${v.c}"></i><span></span><b>${v.n}번</b>`;
+      li.querySelector('span').textContent = name;
+      tally.appendChild(li);
+    });
+    log.slice(-6).reverse().forEach(r => {
+      const li = document.createElement('li');
+      const d = new Date(r.at);
+      li.innerHTML = `<time>${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}</time><span></span>`;
+      li.querySelector('span').textContent = `${r.name} 당첨`;
+      list.appendChild(li);
+    });
+  }
+  $('#reset').addEventListener('click', () => { log = []; store.set('lc-log', log); renderRecord(); });
+  renderRecord();
+
+  /* ---------- sound ---------- */
+  let ac = null, soundOn = store.get('lc-sound', true);
+  const paintSound = () => { soundBtn.textContent = soundOn ? '소리 켬' : '소리 끔'; soundBtn.setAttribute('aria-pressed', String(soundOn)); };
+  paintSound();
+  soundBtn.addEventListener('click', () => { soundOn = !soundOn; store.set('lc-sound', soundOn); paintSound(); });
+  function audioInit() {
+    if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ac = null; } }
+    if (ac && ac.state === 'suspended') ac.resume().catch(() => {});
+  }
+  function noise(dur, type, freq, gain) {
+    if (!ac || !soundOn) return;
+    const len = Math.floor(ac.sampleRate * dur);
+    const buf = ac.createBuffer(1, len, ac.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.2);
+    const src = ac.createBufferSource(); src.buffer = buf;
+    const f = ac.createBiquadFilter(); f.type = type; f.frequency.value = freq;
+    const g = ac.createGain(); g.gain.value = gain;
+    src.connect(f); f.connect(g); g.connect(ac.destination); src.start();
+  }
+  function thump(from, to, dur, gain) {
+    if (!ac || !soundOn) return;
+    const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime;
+    o.frequency.setValueAtTime(from, t); o.frequency.exponentialRampToValueAtTime(to, t + dur);
+    g.gain.setValueAtTime(gain, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + dur);
+  }
+  const sfx = {
+    hiss: () => noise(1.0, 'highpass', 4000, 0.12),
+    boom: () => { noise(0.9, 'lowpass', 900, 0.9); thump(120, 40, 0.5, 0.8); },
+    blast: () => { noise(1.4, 'lowpass', 500, 1.0); thump(90, 30, 0.8, 0.9); },
+    tick: () => thump(900, 600, 0.05, 0.08)
+  };
+
+  /* ---------- canvas sizing ---------- */
+  let W = 0, H = 0;
+  function resize() {
+    const r = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = r.width; H = r.height;
+    canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  new ResizeObserver(resize).observe(canvas);
+  resize();
+
+  function geom() {
+    const gy = H * 0.78;
+    const fs = Math.max(0.62, Math.min(1.35, Math.min(H / 380, W / 600)));
+    const wr = 17 * fs;
+    const px = W * 0.12, py = gy - wr * 1.3;
+    const L = Math.max(46, W * 0.095);
+    const fx = [0.45, 0.665, 0.88].map(f => f * W);
+    return { gy, fs, wr, px, py, L, fx };
+  }
+
+  /* ---------- random pick (unbiased) ---------- */
+  function pick(n) {
+    if (window.crypto && crypto.getRandomValues) {
+      const lim = Math.floor(0x100000000 / n) * n, a = new Uint32Array(1);
+      do { crypto.getRandomValues(a); } while (a[0] >= lim);
+      return a[0] % n;
+    }
+    return Math.floor(Math.random() * n);
+  }
+
+  /* ---------- ballistics ---------- */
+  function solve(i) {
+    const g = geom();
+    const tx = g.fx[i], ty = g.gy - 40 * g.fs;
+    const G = H * 2.4;
+    const T = (0.9 + 0.75 * (tx - g.px) / W) * (reduce ? 0.8 : 1);
+    let sx = g.px, sy = g.py, ang = -0.6;
+    for (let k = 0; k < 3; k++) {
+      const vx = (tx - sx) / T, vy = (ty - sy - 0.5 * G * T * T) / T;
+      ang = Math.atan2(vy, vx);
+      sx = g.px + Math.cos(ang) * g.L; sy = g.py + Math.sin(ang) * g.L;
+    }
+    return { ang, sx, sy, vx: (tx - sx) / T, vy: (ty - sy - 0.5 * G * T * T) / T, G, T, tx, ty };
+  }
+
+  /* ---------- state ---------- */
+  const AIM = reduce ? 0.6 : 2.0, FUSE = reduce ? 0.3 : 0.9, AFTER = 0.9;
+  let state = 'idle', st = 0, clock = 0;
+  let target = -1, hitIdx = -1, plan = null, aimFrom = -0.55, barrel = -0.55;
+  let ball = null, trail = [], parts = [], shake = 0, flash = 0, recoil = 0, lastTickSide = 0;
+  const clouds = Array.from({ length: 4 }, (_, i) => ({ x: Math.random(), y: 0.1 + i * 0.09 + Math.random() * 0.05, s: 0.7 + Math.random() * 0.6, v: 0.004 + Math.random() * 0.006 }));
+
+  function setBusy(b) {
+    fireBtn.disabled = b;
+    inputs.forEach(el => el.disabled = b);
+    fireBtn.textContent = b ? '조준 중…' : (log.length ? '한 번 더 발사' : '발사!');
+  }
+
+  function fire() {
+    if (state !== 'idle' && state !== 'done') return;
+    audioInit();
+    target = pick(3);
+    plan = solve(target);
+    aimFrom = barrel;
+    hitIdx = -1; ball = null; trail = [];
+    banner.hidden = true;
+    state = 'aim'; st = 0;
+    setBusy(true);
+  }
+  fireBtn.addEventListener('click', fire);
+
+  function burst(x, y, fs) {
+    const fire = ['#ffd43b', '#ff922b', '#f03e3e', '#fff3bf'];
+    for (let i = 0; i < 70; i++) {
+      const a = Math.random() * Math.PI * 2, sp = (80 + Math.random() * 360) * fs;
+      parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 120 * fs, life: 0, max: 0.5 + Math.random() * 0.6, r: (2 + Math.random() * 4) * fs, c: fire[i % 4], kind: 'fire' });
+    }
+    for (let i = 0; i < 18; i++) {
+      parts.push({ x: x + (Math.random() - .5) * 30 * fs, y: y + (Math.random() - .5) * 20 * fs, vx: (Math.random() - .5) * 60 * fs, vy: -(20 + Math.random() * 50) * fs, life: 0, max: 1.4 + Math.random(), r: (10 + Math.random() * 12) * fs, c: 'smoke', kind: 'smoke' });
+    }
+  }
+  function puff(x, y, ang, fs) {
+    for (let i = 0; i < 14; i++) {
+      const a = ang + (Math.random() - .5) * 0.9, sp = (40 + Math.random() * 140) * fs;
+      parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0, max: 0.8 + Math.random() * 0.7, r: (6 + Math.random() * 8) * fs, c: 'smoke', kind: 'smoke' });
+    }
+  }
+
+  function update(dt) {
+    clock += dt; st += dt;
+    const g = geom();
+    clouds.forEach(c => { c.x += c.v * dt; if (c.x > 1.2) c.x = -0.2; });
+
+    if (state === 'idle' || state === 'done') {
+      barrel += (-0.55 + Math.sin(clock * 0.8) * 0.04 - barrel) * Math.min(1, dt * 2);
+    } else if (state === 'aim') {
+      const p = Math.min(1, st / AIM);
+      const ease = 1 - Math.pow(1 - p, 3);
+      const wob = reduce ? 0 : Math.sin(p * Math.PI * 6) * 0.32 * Math.pow(1 - p, 1.3);
+      barrel = aimFrom + (plan.ang - aimFrom) * ease + wob;
+      const side = Math.sign(Math.sin(p * Math.PI * 6));
+      if (side !== lastTickSide && p < 0.9) { sfx.tick(); lastTickSide = side; }
+      if (p >= 1) { barrel = plan.ang; state = 'fuse'; st = 0; sfx.hiss(); }
+    } else if (state === 'fuse') {
+      if (Math.random() < 0.6) {
+        const bx = g.px - Math.cos(barrel) * g.L * 0.34, by = g.py - Math.sin(barrel) * g.L * 0.34;
+        parts.push({ x: bx, y: by, vx: (Math.random() - .5) * 120, vy: -Math.random() * 140, life: 0, max: 0.25 + Math.random() * 0.2, r: 1.6 * g.fs, c: '#ffd43b', kind: 'spark' });
+      }
+      if (st >= FUSE) {
+        state = 'flight'; st = 0;
+        recoil = 1; flash = 1;
+        ball = { x: plan.sx, y: plan.sy };
+        puff(plan.sx, plan.sy, plan.ang, g.fs);
+        sfx.boom();
+      }
+    } else if (state === 'flight') {
+      const t = Math.min(st, plan.T);
+      ball.x = plan.sx + plan.vx * t;
+      ball.y = plan.sy + plan.vy * t + 0.5 * plan.G * t * t;
+      trail.push({ x: ball.x, y: ball.y, a: 1 });
+      if (trail.length > 26) trail.shift();
+      if (st >= plan.T) {
+        state = 'hit'; st = 0; hitIdx = target; shake = 1; flash = 0.7;
+        burst(plan.tx, plan.ty, g.fs);
+        ball = null;
+        sfx.blast();
+      }
+    } else if (state === 'hit') {
+      if (st >= AFTER) {
+        state = 'done'; st = 0;
+        const name = nameOf(target);
+        winnerEl.textContent = name;
+        banner.hidden = false;
+        log.push({ name, color: SHIRT[target], at: Date.now() });
+        if (log.length > 200) log = log.slice(-200);
+        store.set('lc-log', log);
+        renderRecord();
+        setBusy(false);
+      }
+    }
+    if (state !== 'flight') trail.forEach(p => p.a -= dt * 2.5), trail = trail.filter(p => p.a > 0);
+
+    recoil = Math.max(0, recoil - dt * 3);
+    shake = Math.max(0, shake - dt * 2.2);
+    flash = Math.max(0, flash - dt * 4);
+    parts.forEach(p => {
+      p.life += dt;
+      if (p.kind === 'smoke') { p.vx *= 0.96; p.vy = p.vy * 0.96 - 20 * dt; p.r += 14 * dt; }
+      else { p.vy += 520 * dt; p.vx *= 0.99; }
+      p.x += p.vx * dt; p.y += p.vy * dt;
+    });
+    parts = parts.filter(p => p.life < p.max);
+  }
+
+  /* ---------- drawing ---------- */
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+  }
+
+  function drawScene(g) {
+    const c = ctx;
+    const sky = c.createLinearGradient(0, 0, 0, g.gy);
+    sky.addColorStop(0, tok('--sky-top')); sky.addColorStop(1, tok('--sky-bot'));
+    c.fillStyle = sky; c.fillRect(-30, -30, W + 60, g.gy + 30);
+
+    c.fillStyle = tok('--cloud');
+    clouds.forEach(cl => {
+      const x = cl.x * W, y = cl.y * H, s = cl.s * g.fs * 22;
+      c.beginPath();
+      c.arc(x, y, s, 0, Math.PI * 2); c.arc(x + s * 1.1, y + s * 0.2, s * 0.8, 0, Math.PI * 2);
+      c.arc(x - s * 1.0, y + s * 0.3, s * 0.7, 0, Math.PI * 2);
+      c.fill();
+    });
+
+    c.fillStyle = tok('--hill');
+    c.beginPath(); c.moveTo(-30, g.gy);
+    for (let x = -30; x <= W + 30; x += 12) c.lineTo(x, g.gy - H * 0.07 - Math.sin(x / W * 5.2 + 1) * H * 0.04 - Math.sin(x / W * 13) * H * 0.012);
+    c.lineTo(W + 30, g.gy); c.closePath(); c.fill();
+
+    c.fillStyle = tok('--ground'); c.fillRect(-30, g.gy, W + 60, H - g.gy + 30);
+    c.fillStyle = tok('--ground-dark'); c.fillRect(-30, g.gy, W + 60, 3 * g.fs);
+
+    // range ticks, 10 m apart, 0 m at the cannon
+    const span = g.fx[2] - g.px, per10 = span / 6;
+    c.fillStyle = tok('--tick');
+    c.font = `600 ${Math.round(9 * g.fs + 2)}px ${tok('--font-body')}`;
+    c.textAlign = 'center'; c.textBaseline = 'top';
+    for (let k = 1; k <= 6; k++) {
+      const x = g.px + per10 * k;
+      c.fillRect(x - 1, g.gy + 3 * g.fs, 2, 6 * g.fs);
+      if (W > 420 || k % 2 === 0) c.fillText(`${k * 10}m`, x, g.gy + 11 * g.fs);
+    }
+  }
+
+  function drawFriend(i, g) {
+    const c = ctx, s = g.fs, x = g.fx[i];
+    const hit = hitIdx === i;
+    const after = hitIdx >= 0 && (state === 'hit' || state === 'done');
+    const cheer = after && !hit;
+    let lift = cheer && !reduce ? Math.abs(Math.sin(clock * 7 + i * 1.3)) * 14 * s : Math.sin(clock * 2 + i * 1.7) * 1.2 * s;
+    const by = g.gy - lift;
+    const ink = tok('--iron');
+
+    c.fillStyle = 'rgba(0,0,0,.2)';
+    c.beginPath(); c.ellipse(x, g.gy + 1, 17 * s, 4 * s, 0, 0, Math.PI * 2); c.fill();
+
+    c.strokeStyle = ink; c.lineCap = 'round'; c.lineWidth = 5 * s;
+    c.beginPath(); c.moveTo(x - 6 * s, by - 18 * s); c.lineTo(x - 7 * s, by - 1 * s);
+    c.moveTo(x + 6 * s, by - 18 * s); c.lineTo(x + 7 * s, by - 1 * s); c.stroke();
+
+    // arms
+    c.strokeStyle = hit ? '#4a3d36' : SHIRT[i]; c.lineWidth = 6 * s;
+    c.beginPath();
+    if (cheer) {
+      c.moveTo(x - 13 * s, by - 42 * s); c.lineTo(x - 20 * s, by - 62 * s);
+      c.moveTo(x + 13 * s, by - 42 * s); c.lineTo(x + 20 * s, by - 62 * s);
+    } else if (hit) {
+      c.moveTo(x - 13 * s, by - 42 * s); c.lineTo(x - 24 * s, by - 34 * s);
+      c.moveTo(x + 13 * s, by - 42 * s); c.lineTo(x + 24 * s, by - 34 * s);
+    } else {
+      c.moveTo(x - 13 * s, by - 42 * s); c.lineTo(x - 16 * s, by - 24 * s);
+      c.moveTo(x + 13 * s, by - 42 * s); c.lineTo(x + 16 * s, by - 24 * s);
+    }
+    c.stroke();
+
+    // body
+    c.fillStyle = hit ? '#4a3d36' : SHIRT[i];
+    roundRect(x - 15 * s, by - 50 * s, 30 * s, 34 * s, 9 * s); c.fill();
+
+    // head
+    const hy = by - 64 * s, hr = 14 * s;
+    c.fillStyle = hit ? '#5a4a40' : '#f2c9a3';
+    c.beginPath(); c.arc(x, hy, hr, 0, Math.PI * 2); c.fill();
+    // hair
+    c.fillStyle = hit ? '#1d1714' : '#2b2220';
+    c.beginPath();
+    if (hit) {
+      for (let k = 0; k < 7; k++) {
+        const a = Math.PI + (k / 6) * Math.PI;
+        c.moveTo(x + Math.cos(a) * hr * 0.8, hy + Math.sin(a) * hr * 0.8);
+        c.lineTo(x + Math.cos(a) * hr * 1.6, hy + Math.sin(a) * hr * 1.6);
+      }
+      c.strokeStyle = '#1d1714'; c.lineWidth = 3 * s; c.stroke();
+    } else {
+      c.arc(x, hy - 2 * s, hr, Math.PI * 1.05, Math.PI * 1.95); c.closePath(); c.fill();
+    }
+
+    // face
+    c.strokeStyle = '#1d1714'; c.fillStyle = '#1d1714'; c.lineWidth = 2 * s;
+    if (hit) {
+      [-5, 5].forEach(dx => {
+        c.beginPath();
+        c.moveTo(x + dx * s - 3 * s, hy - 3 * s); c.lineTo(x + dx * s + 3 * s, hy + 3 * s);
+        c.moveTo(x + dx * s + 3 * s, hy - 3 * s); c.lineTo(x + dx * s - 3 * s, hy + 3 * s);
+        c.stroke();
+      });
+      c.beginPath(); c.ellipse(x, hy + 7 * s, 3 * s, 2.4 * s, 0, 0, Math.PI * 2); c.fill();
+    } else {
+      [-5, 5].forEach(dx => { c.beginPath(); c.arc(x + dx * s, hy, 1.8 * s, 0, Math.PI * 2); c.fill(); });
+      c.beginPath();
+      if (cheer) c.arc(x, hy + 4 * s, 5 * s, 0.1 * Math.PI, 0.9 * Math.PI);
+      else if (state === 'aim' || state === 'fuse' || state === 'flight') c.ellipse(x, hy + 6 * s, 2.5 * s, 2 * s, 0, 0, Math.PI * 2);
+      else c.arc(x, hy + 3 * s, 4 * s, 0.2 * Math.PI, 0.8 * Math.PI);
+      c.stroke();
+    }
+
+    // winner sign
+    if (hit && after) {
+      const sy = hy - 38 * s + Math.sin(clock * 5) * 2 * s;
+      const fsz = Math.round(14 * s + 2);
+      c.font = `${fsz}px ${tok('--font-display')}`;
+      const label = '당첨!';
+      const w = c.measureText(label).width + 18 * s, h = fsz + 10 * s;
+      c.fillStyle = tok('--accent');
+      roundRect(x - w / 2, sy - h / 2, w, h, 6 * s); c.fill();
+      c.fillStyle = '#ffffff'; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText(label, x, sy + 1);
+    }
+
+    // name pill on the ground
+    const ny = g.gy + (H - g.gy) * 0.62;
+    const fsz = Math.round(12 * s + 3);
+    c.font = `700 ${fsz}px ${tok('--font-body')}`;
+    const label = nameOf(i);
+    const w = Math.min(W * 0.2, c.measureText(label).width + 22 * s), h = fsz + 10 * s;
+    c.fillStyle = hit && after ? tok('--accent') : 'rgba(0,0,0,.32)';
+    roundRect(x - w / 2, ny - h / 2, w, h, h / 2); c.fill();
+    c.fillStyle = '#ffffff'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.save(); c.beginPath(); c.rect(x - w / 2 + 4, ny - h / 2, w - 8, h); c.clip();
+    c.fillText(label, x, ny + 1); c.restore();
+  }
+
+  function drawCannon(g) {
+    const c = ctx, { px, py, L, wr } = g, a = barrel;
+    const back = recoil * L * 0.2;
+    const iron = tok('--iron'), brass = tok('--brass');
+
+    // barrel
+    c.save(); c.translate(px, py); c.rotate(a); c.translate(-back, 0);
+    c.fillStyle = iron;
+    c.beginPath();
+    c.moveTo(-L * 0.3, -wr * 0.55); c.lineTo(L, -wr * 0.38); c.lineTo(L, wr * 0.38); c.lineTo(-L * 0.3, wr * 0.55);
+    c.arc(-L * 0.3, 0, wr * 0.55, Math.PI / 2, Math.PI * 1.5); c.closePath(); c.fill();
+    c.fillRect(L - wr * 0.3, -wr * 0.48, wr * 0.32, wr * 0.96);
+    c.fillStyle = brass;
+    c.fillRect(L * 0.08, -wr * 0.53, wr * 0.22, wr * 1.06);
+    c.fillRect(L * 0.55, -wr * 0.45, wr * 0.2, wr * 0.9);
+    c.fillStyle = 'rgba(255,255,255,.18)';
+    c.fillRect(-L * 0.2, -wr * 0.36, L * 1.1, wr * 0.14);
+    c.restore();
+
+    // fuse glow
+    if (state === 'fuse') {
+      const bx = px - Math.cos(a) * L * 0.34, by = py - Math.sin(a) * L * 0.34;
+      c.fillStyle = `rgba(255,200,60,${0.5 + Math.random() * 0.5})`;
+      c.beginPath(); c.arc(bx, by, (3 + Math.random() * 3) * g.fs, 0, Math.PI * 2); c.fill();
+    }
+
+    // carriage
+    c.fillStyle = tok('--wood');
+    c.beginPath();
+    c.moveTo(px - wr * 2.6, g.gy - wr * 0.25);
+    c.lineTo(px - wr * 0.2, py - wr * 0.2);
+    c.lineTo(px + wr * 0.9, py + wr * 0.35);
+    c.lineTo(px + wr * 0.9, g.gy - wr * 0.6);
+    c.closePath(); c.fill();
+
+    // wheel
+    const wx = px, wy = g.gy - wr;
+    c.fillStyle = tok('--wood-dark');
+    c.beginPath(); c.arc(wx, wy, wr, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = iron; c.lineWidth = 3.5 * g.fs; c.stroke();
+    c.strokeStyle = tok('--wood'); c.lineWidth = 2.5 * g.fs;
+    const rot = -recoil * 0.8;
+    for (let k = 0; k < 6; k++) {
+      const ang = rot + k * Math.PI / 3;
+      c.beginPath(); c.moveTo(wx, wy); c.lineTo(wx + Math.cos(ang) * wr * 0.85, wy + Math.sin(ang) * wr * 0.85); c.stroke();
+    }
+    c.fillStyle = brass; c.beginPath(); c.arc(wx, wy, wr * 0.22, 0, Math.PI * 2); c.fill();
+
+    // cannonball stack
+    c.fillStyle = iron;
+    const br = wr * 0.42, sx = px - wr * 3.4;
+    [[0, 0], [br * 2.05, 0], [br * 1.02, -br * 1.75]].forEach(([dx, dy]) => {
+      c.beginPath(); c.arc(sx + dx, g.gy - br + dy, br, 0, Math.PI * 2); c.fill();
+    });
+  }
+
+  function draw() {
+    const c = ctx, g = geom();
+    c.clearRect(0, 0, W, H);
+    c.save();
+    if (shake > 0 && !reduce) c.translate((Math.random() - .5) * shake * 14, (Math.random() - .5) * shake * 10);
+    drawScene(g);
+    [0, 1, 2].forEach(i => drawFriend(i, g));
+    drawCannon(g);
+
+    trail.forEach((p, k) => {
+      c.fillStyle = `rgba(140,140,150,${0.35 * p.a * (k / trail.length)})`;
+      c.beginPath(); c.arc(p.x, p.y, 4 * g.fs * (k / trail.length) + 1, 0, Math.PI * 2); c.fill();
+    });
+    if (ball) {
+      c.fillStyle = '#1b1f26';
+      c.beginPath(); c.arc(ball.x, ball.y, 7 * g.fs, 0, Math.PI * 2); c.fill();
+      c.fillStyle = 'rgba(255,255,255,.35)';
+      c.beginPath(); c.arc(ball.x - 2.2 * g.fs, ball.y - 2.2 * g.fs, 2.2 * g.fs, 0, Math.PI * 2); c.fill();
+    }
+
+    parts.forEach(p => {
+      const k = 1 - p.life / p.max;
+      if (p.kind === 'smoke') c.fillStyle = `rgba(150,150,158,${0.45 * k})`;
+      else { c.globalAlpha = Math.max(0, k); c.fillStyle = p.c; }
+      c.beginPath(); c.arc(p.x, p.y, p.r, 0, Math.PI * 2); c.fill();
+      c.globalAlpha = 1;
+    });
+
+    if (state === 'flight' && st < 0.12) {
+      const mx = g.px + Math.cos(barrel) * g.L, my = g.py + Math.sin(barrel) * g.L;
+      c.fillStyle = 'rgba(255,190,60,.9)';
+      c.beginPath(); c.arc(mx, my, 16 * g.fs * (1 - st / 0.12) + 4, 0, Math.PI * 2); c.fill();
+    }
+    c.restore();
+    if (flash > 0 && !reduce) { c.fillStyle = `rgba(255,240,200,${flash * 0.35})`; c.fillRect(0, 0, W, H); }
+  }
+
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    if (W > 0 && H > 0) { update(dt); draw(); }
+    requestAnimationFrame(frame);
+  }
+  setBusy(false);
+  requestAnimationFrame(frame);
+})();
+</script>
