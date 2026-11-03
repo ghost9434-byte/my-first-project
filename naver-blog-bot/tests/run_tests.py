@@ -163,6 +163,7 @@ def main():
     # 발행 (카테고리·태그)
     for name, q, expect_pub in [("발행: 카테고리·태그", "newdom=1&overlay=1", True),
                                 ("발행: 카테고리 띄어쓰기 다름", "newdom=1&pubtext=1", True),
+                                ("발행: 하위 카테고리 (수정 화면, '하위 카테고리' 글자가 함께 읽힘)", "newdom=1&subcat=1", True),
                                 ("발행: 카테고리 없음 → 발행 안 하고 임시저장만", "newdom=1&nocat=1", False)]:
         p, state = run(port, "../tests/fixtures/pub", q)
         errs = []

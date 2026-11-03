@@ -144,7 +144,8 @@ vi.onchange=()=>{
     prog.innerHTML='<span class="nvu_percent">'+(pct<100? pct+'%' : '업로드 완료')+'</span>';
     if(pct>=100){ clearInterval(tm); sub.disabled=false; } }, stepMs);
 };
-// 발행 창 (?pubtext=1 : 카테고리 이름 띄어쓰기가 다름, ?nocat=1 : 원하는 카테고리가 목록에 없음)
+// 발행 창 (?pubtext=1 : 카테고리 이름 띄어쓰기가 다름, ?nocat=1 : 원하는 카테고리가 목록에 없음,
+//          ?subcat=1 : 수정 화면처럼 하위 카테고리 — ㄴ 아이콘 + 숨은 설명 글 "하위 카테고리"가 함께 읽힘)
 const CATS = ['게시판','[필독] SH SUCCESS','프라이빗 오피스 (룸 안내)','회의실 및 라운지','오시는 길 or 입주 상담',
   opt('pubtext') ? '목포 창업 정보' : '목포 창업정보','오피스 소식', opt('pubtext') ? '목포 맛집 · 생활정보' : '목포 맛집·생활정보'];
 if (opt('nocat')) CATS.pop();
@@ -159,7 +160,11 @@ document.querySelector('.publish_btn__m9KHH').onclick=()=>{
   document.body.appendChild(L);
   const btn=L.querySelector('.selectbox_button__jb1Dt'), ul=L.querySelector('ul');
   btn.onclick=()=>{ ul.hidden=!ul.hidden; };
-  ul.querySelectorAll('label').forEach(l=>l.onclick=()=>{ btn.innerText=l.innerText; ul.hidden=true; });
+  const SUB = '<i class="ico_sub" aria-hidden="true"></i><span class="blind" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">하위 카테고리</span>';
+  const setCat = c => { if (opt('subcat')) btn.innerHTML = SUB + '<br>' + c; else btn.innerText = c; };
+  if (opt('subcat')) { setCat('오피스 소식');
+    ul.querySelectorAll('label').forEach((l, i) => { if (i > 0) l.innerHTML = SUB + ' ' + l.innerText; }); }
+  ul.querySelectorAll('label').forEach(l=>l.onclick=()=>{ setCat(l.innerText.replace('하위 카테고리', '').trim()); ul.hidden=true; });
   const ti=L.querySelector('input');
   ti.addEventListener('keydown',e=>{ if(e.key==='Enter' && ti.value.trim()){ const t=document.createElement('span'); t.className='tag_item__z'; t.innerText='#'+ti.value.trim(); L.querySelector('.tags').appendChild(t); ti.value=''; } });
   L.querySelector('.confirm_btn__WEaBq').onclick=()=>{ window.top.location.href='/postview.html?cat='+encodeURIComponent(btn.innerText); };

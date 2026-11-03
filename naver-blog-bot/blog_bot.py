@@ -178,9 +178,15 @@ def on_login_page(page):
         return "nid.naver.com" in page.url
 
 
-def norm(t):
-    """카테고리 이름 비교용: 공백과 가운뎃점 모양 차이를 없앤다."""
-    return re.sub(r"[\s·・･.ㆍ‧∙•]", "", t or "")
+def _norm_cat(name):
+    """카테고리 이름 비교용.
+    수정 화면 발행 창의 카테고리 칸은 inner_text 가 "하위 카테고리\n오피스 소식" 처럼 읽힌다
+    ("ㄴ"은 아이콘이고, 숨은 설명 글 "하위 카테고리"가 함께 읽힘).
+    그래서 "하위 카테고리" 글자와 앞의 ㄴ·└ 를 지우고, 공백·줄바꿈·가운뎃점 모양 차이를 모두 없앤다.
+    비교할 때는 양쪽 모두 이 함수를 씌운다."""
+    name = re.sub(r"[\s·・･.ㆍ‧∙•]", "", name or "")
+    name = name.replace("하위카테고리", "")
+    return name.lstrip("ㄴ└")
 
 
 def html_to_plain(h):
@@ -801,7 +807,7 @@ class Bot:
 
         # 카테고리
         if category:
-            want = norm(category)
+            want = _norm_cat(category)
             sel_btn = None
             for loc in [fr.locator("button[class*='selectbox_button']"),
                         fr.locator("[class*='publish'] button[aria-haspopup]"),
@@ -815,12 +821,14 @@ class Bot:
             if sel_btn is None:
                 self.diagnose_layer(fr)
                 return False, "카테고리 선택 칸을 찾지 못했습니다"
-            if norm(sel_btn.inner_text()) != want:
+            if _norm_cat(sel_btn.inner_text()) != want:
                 self.safe_click(sel_btn, "카테고리 선택 칸")
                 self.wait(0.8)
                 picked = False
                 gap_chars = r"[\s·・･.ㆍ‧∙•]*"
-                pattern = re.compile("^" + gap_chars + gap_chars.join(re.escape(ch) for ch in want) + gap_chars + "$")
+                # 목록 글자에도 숨은 "하위 카테고리"·ㄴ 아이콘 글자가 붙어 읽힐 수 있다
+                prefix = r"(?:하위\s*카테고리)?[\sㄴ└]*"
+                pattern = re.compile("^" + prefix + gap_chars + gap_chars.join(re.escape(ch) for ch in want) + gap_chars + "$")
                 options = fr.get_by_text(pattern)
                 for i in range(min(options.count(), 10)):
                     o = options.nth(i)
@@ -829,12 +837,12 @@ class Bot:
                             self.safe_click(o, "카테고리")
                             picked = True
                             self.wait(0.4)
-                            if norm(sel_btn.inner_text()) == want:
+                            if _norm_cat(sel_btn.inner_text()) == want:
                                 break
                     except Exception:
                         pass
                 self.wait(0.6)
-                if not picked or norm(sel_btn.inner_text()) != want:
+                if not picked or _norm_cat(sel_btn.inner_text()) != want:
                     self.diagnose_layer(fr)
                     page.keyboard.press("Escape")
                     return False, f"카테고리 '{category}'를 찾지 못했습니다"
